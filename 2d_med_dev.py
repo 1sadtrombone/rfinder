@@ -34,8 +34,11 @@ rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
 rfi_removed[np.where(flags)] = np.nan
 rfi_rem_min_med[np.where(flags)] = np.nan
 
-freqs = [63, 227, 547, 1722]
-#freqs = []
+plt.figure()
+plt.imshow(first_two, aspect='auto', vmin=7, vmax=10)
+
+#freqs = [63, 227, 547, 1722]
+freqs = []
 for freq in freqs:
     plt.figure()
     plt.title(freq)
@@ -51,9 +54,9 @@ for freq in freqs:
 #plt.title('minus svd')
 #plt.imshow(corrected, aspect='auto', vmin=-1e-2, vmax=1e-2)
 
-plt.figure()
-plt.title('rfi removed, log scale')
-plt.imshow(np.log10(rfi_removed), aspect='auto', vmin=7, vmax=10)
+#plt.figure()
+#plt.title('rfi removed, log scale')
+#plt.imshow(np.log10(rfi_removed), aspect='auto', vmin=7, vmax=10)
 
 #plt.figure()
 #plt.title('rfi removed, minus med')
