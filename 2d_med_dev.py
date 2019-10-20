@@ -13,50 +13,67 @@ tf = ti + 3600 * 8
 time, data = sft.ctime2data(data_dir, ti, tf)
 
 subject = data[0] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
-good = subject
 
-u, s, v = np.linalg.svd(np.log10(good), 0)
+u, s, v = np.linalg.svd(np.log10(subject), 0)
 s[2:] = 0
 first_two = np.matmul(u, np.matmul(np.diag(s), v))
-corrected = np.log10(good) - first_two
+corrected = np.log10(subject) - first_two
 
 # make it linear again before median?
 
-median = np.median(corrected, axis=0)
-minus_med = corrected - median
-MAD = np.median(np.abs(minus_med), axis=0)
+mediant = np.median(corrected, axis=0)
+minus_medt = corrected - mediant
+MADt = np.median(np.abs(minus_medt), axis=0)
 
-rfi_removed = good.copy()
-rfi_rem_min_med = minus_med.copy()
-flags = np.where(np.abs(minus_med) > sensitivity * MAD, np.ones(good.shape), np.zeros(good.shape))
-rfi_occ_freq = np.sum(flags, axis=0) / flags.shape[0]
-rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
-rfi_removed[np.where(flags)] = np.nan
-rfi_rem_min_med[np.where(flags)] = np.nan
+medianf = np.median(corrected, axis=1)
+minus_medf = (corrected.T - medianf).T
+MADf = np.median(np.abs(minus_medf), axis=1)
 
-plt.figure()
-plt.imshow(first_two, aspect='auto', vmin=7, vmax=10)
+rfi_removed1d = subject.copy()
+rfi_removed2d = subject.copy()
+rfi_rem_min_medt = minus_medt.copy()
+rfi_rem_min_medf = minus_medf.copy()
+flagst = np.where(np.abs(minus_medt) > sensitivity * MADt, np.ones(subject.shape), np.zeros(subject.shape))
+flagsf = np.where(np.abs(minus_medf) > sensitivity * MADf.reshape(minus_medf.shape[0],-1), np.ones(subject.shape), np.zeros(subject.shape))
+print(MADf.shape)
+flags2d = flagst + flagsf
+#rfi_occ_freq = np.sum(flags, axis=0) / flags.shape[0]
+#rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
+rfi_removed1d[np.where(flagst)] = np.nan
+rfi_removed2d[np.where(flags2d)] = np.nan
 
-#freqs = [63, 227, 547, 1722]
-freqs = []
-for freq in freqs:
+times = [500]
+for time in times:
     plt.figure()
-    plt.title(freq)
-    plt.plot(minus_med[:,freq])
-    plt.plot(minus_med[:,freq])
-    plt.plot([MAD[freq]*sensitivity]*good.shape[0])
-    plt.plot([-MAD[freq]*sensitivity]*good.shape[0])
+    plt.title(time)
+    plt.plot(minus_medt[time])
+    plt.plot(minus_medt[time])
+    plt.plot(flagsf[time])
+    test_flags = np.zeros_like(subject[time])
+    for i in range(test_flags.shape[0]):
+        if abs(minus_medt[time,i]) > sensitivity * MADf[time]:
+            test_flags[i] = 1
+#    plt.plot(flagst[time])
+    plt.plot([MADf[time]*sensitivity]*subject.shape[1])
+    plt.plot([-MADf[time]*sensitivity]*subject.shape[1])
+    plt.plot(test_flags, label='of interest')    
 
+plt.legend()    
 #plt.figure()
 #plt.title('minus med')
 #plt.imshow(minus_med, aspect='auto', vmin=-1e-2, vmax=1e-2)
 #plt.figure()
 #plt.title('minus svd')
 #plt.imshow(corrected, aspect='auto', vmin=-1e-2, vmax=1e-2)
+"""
+plt.figure()
+plt.title('rfi removed 1d, log scale')
+plt.imshow(np.log10(rfi_removed1d), aspect='auto', vmin=7, vmax=10)
 
-#plt.figure()
-#plt.title('rfi removed, log scale')
-#plt.imshow(np.log10(rfi_removed), aspect='auto', vmin=7, vmax=10)
+plt.figure()
+plt.title('rfi removed 2d, log scale')
+plt.imshow(np.log10(rfi_removed2d), aspect='auto', vmin=7, vmax=10)
+
 
 #plt.figure()
 #plt.title('rfi removed, minus med')
@@ -64,8 +81,8 @@ for freq in freqs:
 
 plt.figure()
 plt.title('log scale')
-plt.imshow(np.log10(good), aspect='auto', vmin=7, vmax=10)
-
+plt.imshow(np.log10(subject), aspect='auto', vmin=7, vmax=10)
+"""
 """
 
 plt.figure()
