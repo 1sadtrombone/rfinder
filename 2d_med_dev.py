@@ -26,7 +26,7 @@ minus_medt = corrected - mediant
 MADt = np.median(np.abs(minus_medt), axis=0)
 
 medianf = np.median(corrected, axis=1)
-minus_medf = (corrected.T - medianf).T
+minus_medf = corrected - medianf.T
 MADf = np.median(np.abs(minus_medf), axis=1)
 
 rfi_removed1d = subject.copy()
