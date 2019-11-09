@@ -1,0 +1,40 @@
+import SNAPfiletools as sft
+import numpy as np
+import matplotlib.pyplot as plt
+import datetime
+
+data_dir = "/home/tajdyson/MARS/data_auto_cross"
+
+start_times = [1562729238,
+               1562813825,
+               1563069600,
+               1563163241,
+               1563334200
+               ]
+end_times =   [1562761369,
+               1562847270,
+               1563109200,
+               1563191400,
+               1563364800
+               ]
+
+# GET ALL RFI DATA (ONLY GETS POL00)
+datas = []
+for i in range(len(start_times)):
+    _, v = sft.ctime2data(data_dir, start_times[i], end_times[i])
+    datas.append(v[0])
+
+# NOW PEEK
+
+full_corrected = np.array([[np.nan]*2048])
+for chunk in datas:
+    u, s, v = np.linalg.svd(np.log10(chunk), 0)
+    s[2:] = 0
+    first_two = np.matmul(u, np.matmul(np.diag(s), v))
+    corrected = np.log10(chunk) - first_two
+    full_corrected = np.vstack((full_corrected, corrected))
+    
+full_corrected = np.delete(full_corrected, 0, axis=0)
+print(np.shape(full_corrected))
+plt.imshow(full_corrected, aspect='auto', vmin=-1e-2, vmax=1e-2)
+plt.show()

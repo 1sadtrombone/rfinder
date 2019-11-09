@@ -25,17 +25,17 @@ mediant = np.median(corrected, axis=0)
 minus_medt = corrected - mediant
 MADt = np.median(np.abs(minus_medt), axis=0)
 
-medianf = np.median(corrected, axis=1)
-minus_medf = corrected - medianf.T
-MADf = np.median(np.abs(minus_medf), axis=1)
+# must transpose to interact with the right axis
+medianf = np.array([np.median(corrected, axis=1)]).T
+minus_medf = corrected - medianf
+MADf = np.array([np.median(np.abs(minus_medf), axis=1)]).T
 
 rfi_removed1d = subject.copy()
 rfi_removed2d = subject.copy()
 rfi_rem_min_medt = minus_medt.copy()
 rfi_rem_min_medf = minus_medf.copy()
 flagst = np.where(np.abs(minus_medt) > sensitivity * MADt, np.ones(subject.shape), np.zeros(subject.shape))
-flagsf = np.where(np.abs(minus_medf) > sensitivity * MADf.reshape(minus_medf.shape[0],-1), np.ones(subject.shape), np.zeros(subject.shape))
-print(MADf.shape)
+flagsf = np.where(np.abs(minus_medf) > sensitivity * MADf, np.ones(subject.shape), np.zeros(subject.shape))
 flags2d = flagst + flagsf
 #rfi_occ_freq = np.sum(flags, axis=0) / flags.shape[0]
 #rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
