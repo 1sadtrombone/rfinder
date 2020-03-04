@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 
-data_dir = "/home/tajdyson/MARS/data_auto_cross"
+data_dir = "/home/wizard/mars/data_auto_cross"
 
 start_times = [1562729238,
                1562813825,

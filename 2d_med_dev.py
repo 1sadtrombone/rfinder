@@ -30,7 +30,8 @@ medianf = np.array([np.median(corrected, axis=1)]).T
 minus_medf = corrected - medianf
 MADf = np.array([np.median(np.abs(minus_medf), axis=1)]).T
 
-rfi_removed1d = subject.copy()
+rfi_removedt = subject.copy()
+rfi_removedf = subject.copy()
 rfi_removed2d = subject.copy()
 rfi_rem_min_medt = minus_medt.copy()
 rfi_rem_min_medf = minus_medf.copy()
@@ -39,15 +40,17 @@ flagsf = np.where(np.abs(minus_medf) > sensitivity * MADf, np.ones(subject.shape
 flags2d = flagst + flagsf
 #rfi_occ_freq = np.sum(flags, axis=0) / flags.shape[0]
 #rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
-rfi_removed1d[np.where(flagst)] = np.nan
+rfi_removedt[np.where(flagst)] = np.nan
+rfi_removedf[np.where(flagsf)] = np.nan
 rfi_removed2d[np.where(flags2d)] = np.nan
 
+"""
 times = [500]
 for time in times:
     plt.figure()
     plt.title(time)
     plt.plot(minus_medt[time])
-    plt.plot(minus_medt[time])
+    plt.plot(minus_medf[time])
     plt.plot(flagsf[time])
     test_flags = np.zeros_like(subject[time])
     for i in range(test_flags.shape[0]):
@@ -59,30 +62,35 @@ for time in times:
     plt.plot(test_flags, label='of interest')    
 
 plt.legend()    
+"""
 #plt.figure()
 #plt.title('minus med')
 #plt.imshow(minus_med, aspect='auto', vmin=-1e-2, vmax=1e-2)
 #plt.figure()
 #plt.title('minus svd')
 #plt.imshow(corrected, aspect='auto', vmin=-1e-2, vmax=1e-2)
-"""
+
 plt.figure()
-plt.title('rfi removed 1d, log scale')
-plt.imshow(np.log10(rfi_removed1d), aspect='auto', vmin=7, vmax=10)
+plt.title('rfi removed timewise, log scale')
+plt.imshow(np.log10(rfi_removedt), aspect='auto', vmin=7, vmax=10)
+
+plt.figure()
+plt.title('rfi removed frequencywise, log scale')
+plt.imshow(np.log10(rfi_removedf), aspect='auto', vmin=7, vmax=10)
 
 plt.figure()
 plt.title('rfi removed 2d, log scale')
 plt.imshow(np.log10(rfi_removed2d), aspect='auto', vmin=7, vmax=10)
 
-
+"""
 #plt.figure()
 #plt.title('rfi removed, minus med')
 #plt.imshow(rfi_rem_min_med, aspect='auto', vmin=-1e-2, vmax=1e-2)
-
+"""
 plt.figure()
 plt.title('log scale')
 plt.imshow(np.log10(subject), aspect='auto', vmin=7, vmax=10)
-"""
+
 """
 
 plt.figure()
