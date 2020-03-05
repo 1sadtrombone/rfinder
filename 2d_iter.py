@@ -24,6 +24,7 @@ corrected = logdata - first_modes
 
 plt.plot(np.log10(s), 'k.')
 plt.savefig("10th_svd")
+plt.clf()
 
 rfi_removedt = logdata.copy() #remove in final version
 rfi_removedf = logdata.copy() #remove in final version
@@ -91,7 +92,11 @@ for i in range(max_iters):
 
     total_flags = np.sum(flags)
 
-    print(total_flags - last_flags)
+    if i > 0:
+        # the first run is always going to be garbage
+        # only care about number flagged after second SVD
+        print(total_flags - last_flags)
+
     if (total_flags - last_flags < logdata.size * (1 - 0.997)):
         print(f"converged after {i} iters")
         # I don't plot the results as the flagged points were just statistical fluctuations
@@ -99,7 +104,10 @@ for i in range(max_iters):
     
     rfi_replaced[flags] = 0 # effectively setting them to background level
 
-    last_flags = total_flags
+    if i > 0:
+        # the first run is always going to be garbage
+        # only care about number flagged after second SVD
+        last_flags = total_flags
     
     
 else:
