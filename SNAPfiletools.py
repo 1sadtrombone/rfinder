@@ -91,7 +91,7 @@ def timestamp2ctime(date_strings, time_format='%Y%m%d_%H%M%S'):
 
     t0 = datetime.datetime(1970, 1, 1)
 
-    if isinstance(date_strings, basestring):
+    if isinstance(date_strings, str):
         return int((datetime.datetime.strptime(date_strings, time_format) - t0).total_seconds())
     else:
         return [ int((datetime.datetime.strptime(d, time_format) - t0).total_seconds()) for d in date_strings ]
