@@ -1,14 +1,16 @@
 import SNAPfiletools as sft
 import numpy as np
+import copy
 import matplotlib.pyplot as plt
 import datetime
 
 data_dir = "/home/wizard/mars/data_auto_cross"
-plot_dir = "/home/wizard/mars/plots"
+plot_dir = "/home/wizard/mars/plots/rfinder"
+name = "10th" # string to identify plots saved with these settings
 sensitivity = 5 # anything sensitivity*MAD above/below median flagged
-first_nmode = 3 # number of SVD modes to subtract off to start with
-second_nmode = 3 # after initial flagging
-max_iters = 50
+first_nmode = 1 # number of SVD modes to subtract off to start with
+second_nmode = 1 # after initial flagging
+max_iters = 10
 
 ti = 1562813825
 tf = ti + 3600 * 8
@@ -23,13 +25,17 @@ first_modes = np.matmul(u[:,:first_nmode], np.matmul(np.diag(s[:first_nmode]), v
 corrected = logdata - first_modes
 
 plt.plot(np.log10(s), 'k.')
-plt.savefig("10th_svd")
+plt.savefig(f"{plot_dir}/{name}_first_svd")
 plt.clf()
 
-rfi_removedt = logdata.copy() #remove in final version
-rfi_removedf = logdata.copy() #remove in final version
-rfi_removed = logdata.copy()
-rfi_replaced = corrected.copy()
+plt.imshow(first_modes, aspect='auto')
+plt.savefig(f"{plot_dir}/{name}_first_svd_firstmodes")
+plt.clf()
+
+rfi_removedt = copy.deepcopy(logdata) #remove in final version
+rfi_removedf = copy.deepcopy(logdata) #remove in final version
+rfi_removed = copy.deepcopy(logdata) 
+rfi_replaced = copy.deepcopy(corrected)
 
 flags = np.zeros_like(logdata, dtype=bool)
 
@@ -43,22 +49,29 @@ for i in range(max_iters):
         u, s, v = np.linalg.svd(gapfilled_logdata, 0)
         gapfilled_first_modes = np.matmul(u[:,:second_nmode], np.matmul(np.diag(s[:second_nmode]), v[:second_nmode,:]))
         rfi_replaced = gapfilled_logdata - gapfilled_first_modes
+        corrected = logdata - gapfilled_first_modes
 
         plt.plot(np.log10(s), 'k.')
-        plt.savefig(f"{plot_dir}/10th_second_svd")
+        plt.savefig(f"{plot_dir}/{name}_second_svd")
         plt.clf()
 
+        plt.imshow(gapfilled_first_modes, aspect='auto')
+        plt.savefig(f"{plot_dir}/{name}_second_svd_firstmodes")
+        plt.clf()
+            
     plt.title(f"RFI removed after {i} iterations")
     plt.imshow(rfi_removed, aspect='auto')
     plt.colorbar()
-    plt.savefig(f"{plot_dir}/10th_rfi_iter_{i}")
+    plt.savefig(f"{plot_dir}/{name}_rfi_iter_{i}")
     plt.clf()
     
     plt.title(f"gapfilled data after {i} iterations")
     plt.imshow(rfi_replaced, aspect='auto')
     plt.colorbar()
-    plt.savefig(f"{plot_dir}/10th_data_iter_{i}")
+    plt.savefig(f"{plot_dir}/{name}_data_iter_{i}")
     plt.clf()
+
+    print(f"saved figs after {i} iters")
     
     mediant = np.median(rfi_replaced, axis=0) # calculate median using replaced values
     minus_medt = corrected - mediant # here use raw data minus SVD baseline (RFI present)
@@ -78,7 +91,7 @@ for i in range(max_iters):
     plt.plot(MADt[chan]*sensitivity*np.ones_like(rfi_removed[:,chan]), label="MADt")
     plt.plot(mediant[chan]*np.ones_like(rfi_removed[:,chan]), label="mediant")
     plt.legend()
-    plt.savefig(f"{plot_dir}/10th_rfi_channel_{chan}_iter_{i}")
+    plt.savefig(f"{plot_dir}/{name}_rfi_channel_{chan}_iter_{i}")
     plt.clf()
     
     flagst = (np.abs(minus_medt) > sensitivity * MADt)
@@ -92,23 +105,16 @@ for i in range(max_iters):
 
     total_flags = np.sum(flags)
 
-    if i > 0:
-        # the first run is always going to be garbage
-        # only care about number flagged after second SVD
-        print(total_flags - last_flags)
+    print(f"new flags after {i+1} iters: {total_flags - last_flags}")
 
     if (total_flags - last_flags < logdata.size * (1 - 0.997)):
         print(f"converged after {i} iters")
         # I don't plot the results as the flagged points were just statistical fluctuations
         break
     
-    rfi_replaced[flags] = 0 # effectively setting them to background level
+    rfi_replaced[flags] = 0 # effectively setting them to background (SVD) level
 
-    if i > 0:
-        # the first run is always going to be garbage
-        # only care about number flagged after second SVD
-        last_flags = total_flags
-    
-    
+    last_flags = total_flags
+        
 else:
     print(f"reached max_iters={max_iters}")
