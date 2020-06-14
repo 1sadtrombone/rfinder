@@ -5,15 +5,19 @@ import matplotlib.pyplot as plt
 import datetime
 import scipy.ndimage
 
-data_dir = "$PROJECT/../mars2019/auto_cross/data_auto_cross"
-plot_dir = "$SCRATCH/rfi_plots"
-name = "medfilt_10MAD" # string to identify plots saved with these settings
-sensitivity = 10 # anything sensitivity*MAD above/below median flagged
+import os
+
+data_dir = f"{os.environ.get('PROJECT')}/../mars2019/auto_cross/data_auto_cross"
+plot_dir = f"{os.environ.get('SCRATCH')}/rfi_plots"
+name = "medfilt_7MAD" # string to identify plots saved with these settings
+sensitivity = 7 # anything sensitivity*MAD above/below median flagged
 ks_freq = 25 # size of kernel along freq axis
 ks_time = 351 # size of kernel along time axis
 
-ti = sft.timestamp2ctime('20190710_220700') + 3600 * 5
-tf = ti + 3600 * 8
+times = np.genfromtxt('good_times.csv')
+
+ti = times[0]
+tf = times[1]
 
 time, data = sft.ctime2data(data_dir, ti, tf)
 
