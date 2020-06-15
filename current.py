@@ -9,7 +9,7 @@ import os
 
 data_dir = f"{os.environ.get('PROJECT')}/../mars2019/auto_cross/data_auto_cross"
 plot_dir = f"{os.environ.get('SCRATCH')}/rfi_plots"
-times_file = 'good_times.csv'
+times_file = f"{os.environ.get('HOME')}/rfinder/good_times.csv"
 name = "med_SVD" # string to identify plots saved with these settings
 sensitivity = 7 # anything sensitivity*MAD above/below median flagged
 ks_freq = 25 # size of kernel along freq axis
@@ -57,8 +57,8 @@ rough_flags = flag(rough_corrected, sensitivity)
 gapfilled = copy.deepcopy(rough_corrected)
 gapfilled[rough_flags] = rough_baseline[rough_flags]
 
-u, s, v = np.linalg.svd(gapfilled_logdata, 0)
-first_modes = np.matmul(u[:,:first_nmode], np.matmul(np.diag(s[:first_nmode]), v[:first_nmode,:]))
+u, s, v = np.linalg.svd(gapfilled, 0)
+first_modes = np.matmul(u[:,:nmode], np.matmul(np.diag(s[:nmode]), v[:nmode,:]))
 minus_SVD = logdata - first_modes
 
 baseline = scipy.ndimage.median_filter(logdata, [ks_time, ks_freq])
