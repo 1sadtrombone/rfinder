@@ -7,9 +7,9 @@ import datetime
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "highpass_med_of_lowpass" # string to identify plots saved with these settings
-sensitivity = 5 # anything sensitivity*MAD above/below median flagged
-fmode = 2
+name = "highpass_bkgndasmed_real_noflagonnegative_globalMAD_3MAD" # string to identify plots saved with these settings
+sensitivity = 3 # anything sensitivity*MAD above/below median flagged
+fmode = 1
 
 times = np.genfromtxt(times_file)
 
@@ -36,28 +36,34 @@ plt.savefig(f"{plot_dir}/{name}_logdata", dpi=600)
 plt.clf()
 
 fourier = np.fft.fft(logdata, axis=0)
+# lowpass
 fourier[fmode:] = 0
 filtered = np.fft.ifft(fourier, axis=0)
 
-corrected = logdata - np.abs(filtered)
+corrected = logdata - filtered
 
 plt.imshow(np.real(filtered[:,plot_if:plot_ff]), aspect='auto')
 plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_filtered")
 plt.clf()
 
-mediant = np.median(filtered, axis=0)
-minus_medt = corrected - mediant
-MADt = np.median(np.abs(minus_medt), axis=0)
+mediant = filtered
+minus_medt = corrected
+MADt = np.median(np.abs(minus_medt))
 # now have (freq) values to be compared to each time-dependent column
 
+# the filtered (highpass) data is like a minus_med
+
 plt.plot(np.real(corrected[:,1541]))
-plt.plot((MADt*spensitivity+np.abs(mediant))[1541]*np.ones_like(logdata[:,500]))
-plt.plot((-MADt*sensitivity+np.abs(mediant))[1541]*np.ones_like(logdata[:,500]))
+plt.plot((MADt*sensitivity)[1541]*np.ones_like(logdata[:,500]))
 plt.savefig(f"{plot_dir}/{name}_filt_1541")
 plt.clf()
 
-flags = (np.abs(minus_medt) > sensitivity * MADt)
+plt.plot(np.real(filtered)[:,1541])
+plt.savefig(f"{plot_dir}/{name}_corrected_1541")
+plt.clf()
+
+flags = (np.real(corrected) > sensitivity * MADt)
 
 rfi_removed = np.ma.masked_where(flags, corrected)
 
@@ -75,8 +81,6 @@ plt.imshow(np.ma.masked_where(flags, logdata)[:,plot_if:plot_ff], aspect='auto')
 plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_rfi_removed_logdata", dpi=600)
 plt.clf()
-
-
 
 f, ((a0, a1), (a2, a3)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [3,1], 'height_ratios':[1,3]})
 a1.set_axis_off()
