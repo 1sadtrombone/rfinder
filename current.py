@@ -9,7 +9,7 @@ plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
 name = "highpass_timewise_bkgndasmed_real_noflagonnegative_globalMAD_5MAD" # string to identify plots saved with these settings
 sensitivity = 5 # anything sensitivity*MAD above/below median flagged
-fmode = 10
+fmode = 1500
 
 times = np.genfromtxt(times_file)
 
@@ -37,7 +37,7 @@ plt.clf()
 
 fourier = np.fft.fft(logdata, axis=1)
 # lowpass
-fourier[fmode:] = 0
+fourier[:,fmode:] = 0
 filtered = np.fft.ifft(fourier, axis=1)
 
 plt.imshow(np.real(filtered[:,plot_if:plot_ff]), aspect='auto')
