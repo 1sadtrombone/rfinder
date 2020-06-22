@@ -8,8 +8,8 @@ from scipy.ndimage import median_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "medfilt_timewise_bkgndasmed_real_noflagonnegative_globalMAD_10MAD" # string to identify plots saved with these settings
-sensitivity = 10 # anything sensitivity*MAD above/below median flagged
+name = "medfilt_timewise_bkgndasmed_real_noflagonnegative_globalMAD_7MAD" # string to identify plots saved with these settings
+sensitivity = 7 # anything sensitivity*MAD above/below median flagged
 window = 10 # median filter window length
 
 times = np.genfromtxt(times_file)
@@ -27,6 +27,8 @@ startf = 300
 # show only this freq range in the rfi removed plot and SVD plot
 plot_if = 0
 plot_ff = 2000
+
+t = 500
 
 logdata = np.log10(subject[:,startf:])
 
@@ -50,14 +52,14 @@ MAD = np.median(np.abs(np.real(corrected)))
 
 # the corrected (highpass) data is like a minus_med
 
-plt.plot(np.real(corrected[1541]))
+plt.plot(np.real(corrected[t]))
 plt.plot((MAD*sensitivity)*np.ones_like(logdata[500]))
-plt.savefig(f"{plot_dir}/{name}_corrected_1541")
+plt.savefig(f"{plot_dir}/{name}_corrected_{t}", dpi=600)
 plt.clf()
 
-plt.plot(logdata[1541])
-plt.plot(np.real(filtered)[1541])
-plt.savefig(f"{plot_dir}/{name}_filt_1541")
+plt.plot(logdata[t])
+plt.plot(np.real(filtered)[t])
+plt.savefig(f"{plot_dir}/{name}_filt_{t}")
 plt.clf()
 
 flags = (np.real(corrected) > sensitivity * MAD)
