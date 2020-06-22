@@ -3,13 +3,14 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 import datetime
+from scipy.ndimage import median_filter
 
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "highpass_timewise_bkgndasmed_real_noflagonnegative_globalMAD_5MAD" # string to identify plots saved with these settings
-sensitivity = 5 # anything sensitivity*MAD above/below median flagged
-fmode = 1500
+name = "medfilt_timewise_bkgndasmed_real_noflagonnegative_globalMAD_10MAD" # string to identify plots saved with these settings
+sensitivity = 10 # anything sensitivity*MAD above/below median flagged
+window = 10 # median filter window length
 
 times = np.genfromtxt(times_file)
 
@@ -35,10 +36,7 @@ plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_logdata", dpi=600)
 plt.clf()
 
-fourier = np.fft.fft(logdata, axis=1)
-# lowpass
-fourier[:,fmode:] = 0
-filtered = np.fft.ifft(fourier, axis=1)
+filtered = median_filter(logdata, [1, window])
 
 plt.imshow(np.real(filtered[:,plot_if:plot_ff]), aspect='auto')
 plt.colorbar()
@@ -57,6 +55,7 @@ plt.plot((MAD*sensitivity)*np.ones_like(logdata[500]))
 plt.savefig(f"{plot_dir}/{name}_corrected_1541")
 plt.clf()
 
+plt.plot(logdata[1541])
 plt.plot(np.real(filtered)[1541])
 plt.savefig(f"{plot_dir}/{name}_filt_1541")
 plt.clf()
