@@ -70,12 +70,6 @@ rfi_occ_freq = np.sum(flags, axis=0) / flags.shape[0]
 rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
 
 plt.title("RFI removed")
-plt.imshow(np.abs(rfi_removed[:,plot_if:plot_ff]), aspect='auto')
-plt.colorbar()
-plt.savefig(f"{plot_dir}/{name}_rfi_removed_abs", dpi=600)
-plt.clf()
-
-plt.title("RFI removed")
 plt.imshow(np.ma.masked_where(flags, logdata)[:,plot_if:plot_ff], aspect='auto')
 plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_rfi_removed_logdata", dpi=600)
