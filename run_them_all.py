@@ -7,7 +7,7 @@ from scipy.ndimage import median_filter
 
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
-times_file = "good_times.csv"
+times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
 name = "big_run_timewise_medfilt" # string to identify plots saved with these settings
 sensitivity = 5 # anything sensitivity*MAD above/below median flagged
 window = 10 # median filter window length
