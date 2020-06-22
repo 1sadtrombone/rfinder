@@ -3,22 +3,14 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 import datetime
+from scipy.ndimage import median_filter
 
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "good_times.csv"
-name = "big_run_zoom_1100_to_1500" # string to identify plots saved with these settings
+name = "big_run_timewise_medfilt" # string to identify plots saved with these settings
 sensitivity = 5 # anything sensitivity*MAD above/below median flagged
-
-def flag(data, sensitivity):
-    mediant = np.median(data, axis=0) 
-    minus_medt = data - mediant
-    MADt = np.median(np.abs(minus_medt), axis=0)
-    # now have (freq) values to be compared to each time-dependent column
-
-    flags = (np.abs(minus_medt) > sensitivity * MADt)
-    
-    return flags
+window = 10 # median filter window length
 
 times = np.genfromtxt(times_file)
 
@@ -35,8 +27,8 @@ for i in range(times.shape[0]//2):
     startf = 300
 
     # show only this freq range in the rfi removed plot and SVD plot
-    plot_if = 800
-    plot_ff = 1200
+    plot_if = 0
+    plot_ff = 2100
 
     logdata = np.log10(subject[:,startf:])
 
@@ -46,22 +38,29 @@ for i in range(times.shape[0]//2):
     plt.savefig(f"{plot_dir}/{name}_{i}_logdata", dpi=600)
     plt.clf()
 
-    continue
+    filtered = median_filter(logdata, [1, window])
 
-    rfi_removed = copy.deepcopy(logdata) 
+    corrected = logdata - filtered
 
-    flags = flag(logdata, sensitivity)
+    MAD = np.median(np.abs(corrected))
 
-    rfi_removed = np.ma.masked_where(flags, rfi_removed)
+    flags = (corrected > sensitivity * MAD)
+
+    rfi_removed = np.ma.masked_where(flags, corrected)
 
     rfi_occ_freq = np.sum(flags, axis=0) / flags.shape[0]
     rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
-
 
     plt.title("RFI removed")
     plt.imshow(rfi_removed[:,plot_if:plot_ff], aspect='auto')
     plt.colorbar()
     plt.savefig(f"{plot_dir}/{name}_{i}_rfi_removed", dpi=600)
+    plt.clf()
+
+    plt.title("RFI removed (logdata)")
+    plt.imshow(np.ma.masked_where(flags, logdata)[:,plot_if:plot_ff], aspect='auto')
+    plt.colorbar()
+    plt.savefig(f"{plot_dir}/{name}_{i}rfi_removed_logdata", dpi=600)
     plt.clf()
 
     f, ((a0, a1), (a2, a3)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [3,1], 'height_ratios':[1,3]})
