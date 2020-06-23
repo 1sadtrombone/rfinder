@@ -8,7 +8,7 @@ from scipy.ndimage import median_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "param_adjust_finer" # string to identify plots saved with these settings
+name = "param_adjust_localMAD_oddkernel" # string to identify plots saved with these settings
 
 sens_min = 4
 sens_max = 12
@@ -61,14 +61,14 @@ for sens in senses:
             plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_corrected", dpi=600)
             plt.clf()
 
-            MAD = np.median(np.abs(corrected))
+            MAD = np.median(np.abs(corrected), axis=1)
             
             plt.plot(corrected[t])
-            plt.plot((MAD*sens)*np.ones_like(logdata[500]))
+            plt.plot((MAD*sens)[t]*np.ones_like(logdata[500]))
             plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_corrected_{t}", dpi=600)
             plt.clf()
 
-            flags = (corrected > sens * MAD)
+            flags = (corrected > sens * MAD.reshape((-1,1)))
 
             rfi_removed = np.ma.masked_where(flags, corrected)
 
