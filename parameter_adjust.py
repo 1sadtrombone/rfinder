@@ -8,22 +8,19 @@ from scipy.ndimage import median_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "param_adjust_timewise_medfilt" # string to identify plots saved with these settings
+name = "param_adjust_finer" # string to identify plots saved with these settings
 
-sens_min = 2
-sens_max = 10
+sens_min = 4
+sens_max = 12
 sens_step = 2
 senses = np.arange(sens_min, sens_max, sens_step)
 
-winf_min = 1
-winf_max = 40
-winf_step = 5
-winfs = np.arange(winf_min, winf_max, winf_step)
+wint = 1
 
-wint_min = 1
-wint_max = 40
-wint_step = 5
-wints = np.arange(wint_min, wint_max, wint_step)
+winf_min = 3
+winf_max = 11
+winf_step = 2
+winfs = np.arange(winf_min, winf_max, winf_step)
 
 times = np.genfromtxt(times_file)
 
@@ -41,6 +38,8 @@ startf = 300
 plot_if = 0
 plot_ff = 2100
 
+t = 250
+
 logdata = np.log10(subject[:,startf:])
 
 plt.title("logdata")
@@ -51,26 +50,30 @@ plt.clf()
 
 for sens in senses:
     for winf in winfs:
-        for wint in wints:
 
             filtered = median_filter(logdata, [wint, winf])
 
             corrected = logdata - filtered
 
             plt.title("corrected")
-            plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto')
+            plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmax=np.max(corrected), vmin=np.min(corrected))
             plt.colorbar()
             plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_corrected", dpi=600)
             plt.clf()
 
             MAD = np.median(np.abs(corrected))
+            
+            plt.plot(corrected[t])
+            plt.plot((MAD*sens)*np.ones_like(logdata[500]))
+            plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_corrected_{t}", dpi=600)
+            plt.clf()
 
             flags = (corrected > sens * MAD)
 
             rfi_removed = np.ma.masked_where(flags, corrected)
 
             plt.title("RFI removed")
-            plt.imshow(rfi_removed[:,plot_if:plot_ff], aspect='auto')
+            plt.imshow(rfi_removed[:,plot_if:plot_ff], aspect='auto', vmax=np.max(rfi_removed), vmin=np.min(rfi_removed))
             plt.colorbar()
             plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_rfi_removed", dpi=600)
             plt.clf()

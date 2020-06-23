@@ -8,8 +8,8 @@ from scipy.ndimage import median_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "medfilt_timewise_bkgndasmed_noflagonnegative_globalMAD_7MAD" # string to identify plots saved with these settings
-sensitivity = 7 # anything sensitivity*MAD above/below median flagged
+name = "medfilt_timewise_bkgndasmed_noflagonnegative_globalMAD_6MAD" # string to identify plots saved with these settings
+sensitivity = 6 # anything sensitivity*MAD above/below median flagged
 window = 10 # median filter window length
 
 times = np.genfromtxt(times_file)
@@ -28,7 +28,7 @@ startf = 300
 plot_if = 0
 plot_ff = 2000
 
-t = 500
+t = 1400
 
 logdata = np.log10(subject[:,startf:])
 
@@ -40,15 +40,15 @@ plt.clf()
 
 filtered = median_filter(logdata, [1, window])
 
-plt.imshow(filtered[:,plot_if:plot_ff], aspect='auto')
-plt.colorbar()
-plt.savefig(f"{plot_dir}/{name}_filtered")
-plt.clf()
-
 corrected = logdata - filtered
 
+plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto')
+plt.colorbar()
+plt.savefig(f"{plot_dir}/{name}_corrected")
+plt.clf()
+
 MAD = np.median(np.abs(corrected))
-# now have (freq) values to be compared to each time-dependent column
+# now have (time) values to be compared to each freq-dependent row
 
 # the corrected (highpass) data is like a minus_med
 
@@ -62,7 +62,7 @@ plt.plot(filtered[t])
 plt.savefig(f"{plot_dir}/{name}_filt_{t}")
 plt.clf()
 
-flags = (corrected > sensitivity * MAD)
+flags = (corrected > sensitivity * MAD.reshape(-1,1))
 
 rfi_removed = np.ma.masked_where(flags, corrected)
 
