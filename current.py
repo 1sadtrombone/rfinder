@@ -8,9 +8,9 @@ from scipy.ndimage import median_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "crossmed_10MAD_5win" # string to identify plots saved with these settings
+name = "iterated_medianfilter_10MAD" # string to identify plots saved with these settings
 sensitivity = 10 # anything sensitivity*MAD above/below median flagged
-window = 5 # median filter window length
+wins = [5, 3] # median filter window widths. Should decrease
 
 times = np.genfromtxt(times_file)
 
@@ -39,21 +39,17 @@ plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_logdata", dpi=600)
 plt.clf()
 
-minus_medf = logdata - np.median(logdata, axis=0)
+corrected = copy.deepcopy(logdata)
 
-filtered = median_filter(minus_medf, [1, window])
+for win in wins:
 
-corrected = minus_medf - filtered
+    filtered = median_filter(corrected, size=[1,win])
+    corrected -= filtered
 
-plt.imshow(minus_medf[:,plot_if:plot_ff], aspect='auto', vmin=-0.02, vmax=0.02)
-plt.colorbar()
-plt.savefig(f"{plot_dir}/{name}_minus_medf", dpi=600)
-plt.clf()
-
-plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.0025, vmax=0.0025)
-plt.colorbar()
-plt.savefig(f"{plot_dir}/{name}_corrected", dpi=600)
-plt.clf()
+    plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.001, vmax=0.001)
+    plt.colorbar()
+    plt.savefig(f"{plot_dir}/{name}_corrected_{win}win", dpi=600)
+    plt.clf()
 
 MAD = np.median(np.abs(corrected))
 
