@@ -8,9 +8,9 @@ from scipy.ndimage import median_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "twoway_median_subtraction_7MAD" # string to identify plots saved with these settings
-sensitivity = 3 # anything sensitivity*MAD above/below median flagged
-window = 7 # median filter window length
+name = "crossmed_10MAD_5win" # string to identify plots saved with these settings
+sensitivity = 10 # anything sensitivity*MAD above/below median flagged
+window = 5 # median filter window length
 
 times = np.genfromtxt(times_file)
 
@@ -41,45 +41,39 @@ plt.clf()
 
 minus_medf = logdata - np.median(logdata, axis=0)
 
-minus_medt = minus_medf - np.median(minus_medf, axis=1).reshape((-1,1))
+filtered = median_filter(minus_medf, [1, window])
 
-plt.imshow(np.median(minus_medf, axis=1).reshape((-1,1))*np.ones_like(logdata), aspect='auto')
-plt.show()
+corrected = minus_medf - filtered
 
 plt.imshow(minus_medf[:,plot_if:plot_ff], aspect='auto', vmin=-0.02, vmax=0.02)
 plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_minus_medf", dpi=600)
 plt.clf()
 
-plt.imshow(minus_medt[:,plot_if:plot_ff], aspect='auto', vmin=-0.01, vmax=0.01)
+plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.0025, vmax=0.0025)
 plt.colorbar()
-plt.savefig(f"{plot_dir}/{name}_minus_medt", dpi=600)
+plt.savefig(f"{plot_dir}/{name}_corrected", dpi=600)
 plt.clf()
 
-#mediant = np.median(logdata, axis=0)
-#minus_medt = logdata - mediant
-#MAD = np.median(np.abs(minus_medt), axis=0)
-
-MAD = np.median(np.abs(minus_medt))
-# now have (freq) values to be compared to each time-dependent row
+MAD = np.median(np.abs(corrected))
 
 axes = plt.gca()
 axes.set_ylim([-0.01,0.01])
-plt.plot(minus_medt[:,f])
-plt.plot(np.median(minus_medt[:,f])*np.ones_like(logdata[:,500]))
+plt.plot(corrected[:,f])
+plt.plot(np.median(corrected[:,f])*np.ones_like(logdata[:,500]))
 plt.plot((MAD*sensitivity)*np.ones_like(logdata[:,500]))
-plt.savefig(f"{plot_dir}/{name}_minus_medt_{f}f", dpi=600)
+plt.savefig(f"{plot_dir}/{name}_corrected_{f}f", dpi=600)
 plt.clf()
 
-plt.plot(minus_medt[t])
-plt.plot(np.median(minus_medt[t])*np.ones_like(logdata[500]))
+plt.plot(corrected[t])
+plt.plot(np.median(corrected[t])*np.ones_like(logdata[500]))
 plt.plot((MAD*sensitivity*np.ones_like(logdata[500])))
-plt.savefig(f"{plot_dir}/{name}_minus_medt_{t}t", dpi=600)
+plt.savefig(f"{plot_dir}/{name}_corrected_{t}t", dpi=600)
 plt.clf()
          
-flags = (minus_medt > sensitivity * MAD)
+flags = (corrected > sensitivity * MAD)
 
-rfi_removed = np.ma.masked_where(flags, minus_medt)
+rfi_removed = np.ma.masked_where(flags, corrected)
 
 rfi_occ_freq = np.sum(flags, axis=0) / flags.shape[0]
 rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
@@ -87,7 +81,7 @@ rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
 plt.title("RFI removed")
 plt.imshow(rfi_removed[:,plot_if:plot_ff], aspect='auto', vmin=0)
 plt.colorbar()
-plt.savefig(f"{plot_dir}/{name}_rfi_removed_minus_medt", dpi=600)
+plt.savefig(f"{plot_dir}/{name}_rfi_removed_corrected", dpi=600)
 plt.clf()
 
 plt.title("RFI removed")
