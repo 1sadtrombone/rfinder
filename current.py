@@ -8,9 +8,9 @@ from scipy.ndimage import median_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "iterated_medianfilter_10MAD" # string to identify plots saved with these settings
-sensitivity = 10 # anything sensitivity*MAD above/below median flagged
-wins = [5, 3] # median filter window widths. Should decrease
+name = "iterated_medianfilter_7MAD" # string to identify plots saved with these settings
+sensitivity = 7 # anything sensitivity*MAD above/below median flagged
+wins = [6, 4] # median filter window widths. Should decrease
 
 times = np.genfromtxt(times_file)
 
