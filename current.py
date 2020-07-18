@@ -10,7 +10,7 @@ plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
 name = "iterated_medianfilter_7MAD" # string to identify plots saved with these settings
 sensitivity = 7 # anything sensitivity*MAD above/below median flagged
-wins = [6, 4] # median filter window widths. Should decrease
+wins = [12, 6] # median filter window widths. Should decrease
 
 times = np.genfromtxt(times_file)
 
