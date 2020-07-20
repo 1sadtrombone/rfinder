@@ -8,9 +8,9 @@ from scipy.ndimage import median_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "iterated_medianfilter_7MAD" # string to identify plots saved with these settings
-sensitivity = 7 # anything sensitivity*MAD above/below median flagged
-wins = [12, 6] # median filter window widths. Should decrease
+name = "freqwise_medfilt_14MAD" # string to identify plots saved with these settings
+sensitivity = 14 # anything sensitivity*MAD above/below median flagged
+win = 7
 
 times = np.genfromtxt(times_file)
 
@@ -22,7 +22,7 @@ time, data = sft.ctime2data(data_dir, ti, tf)
 subject = data[0] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
 
 # get rid of cruft below about 30MHz
-startf = 300
+startf = 0
 
 # show only this freq range in the rfi removed plot and SVD plot
 plot_if = 0
@@ -41,33 +41,34 @@ plt.clf()
 
 corrected = copy.deepcopy(logdata)
 
-for win in wins:
+filtered = median_filter(corrected, size=[1,win])
+corrected -= filtered
 
-    filtered = median_filter(corrected, size=[1,win])
-    corrected -= filtered
+plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.001, vmax=0.001)
+plt.colorbar()
+plt.savefig(f"{plot_dir}/{name}_corrected_{win}win", dpi=600)
+plt.clf()
 
-    plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.001, vmax=0.001)
-    plt.colorbar()
-    plt.savefig(f"{plot_dir}/{name}_corrected_{win}win", dpi=600)
-    plt.clf()
-
-MAD = np.median(np.abs(corrected))
+MAD = np.median(np.abs(corrected), axis=0)
+globalMAD = np.median(np.abs(corrected))
 
 axes = plt.gca()
 axes.set_ylim([-0.01,0.01])
 plt.plot(corrected[:,f])
 plt.plot(np.median(corrected[:,f])*np.ones_like(logdata[:,500]))
-plt.plot((MAD*sensitivity)*np.ones_like(logdata[:,500]))
+#plt.plot((MAD[f]*sensitivity)*np.ones_like(logdata[:,500]))
+plt.plot((globalMAD*sensitivity)*np.ones_like(logdata[:,500]))
+plt.legend()
 plt.savefig(f"{plot_dir}/{name}_corrected_{f}f", dpi=600)
 plt.clf()
 
 plt.plot(corrected[t])
-plt.plot(np.median(corrected[t])*np.ones_like(logdata[500]))
-plt.plot((MAD*sensitivity*np.ones_like(logdata[500])))
+plt.plot((globalMAD*sensitivity*np.ones_like(logdata[500])))
+plt.legend()
 plt.savefig(f"{plot_dir}/{name}_corrected_{t}t", dpi=600)
 plt.clf()
          
-flags = (corrected > sensitivity * MAD)
+flags = (corrected > sensitivity * globalMAD)
 
 rfi_removed = np.ma.masked_where(flags, corrected)
 
