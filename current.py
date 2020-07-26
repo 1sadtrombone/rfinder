@@ -8,10 +8,10 @@ from scipy.ndimage import median_filter, uniform_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "freqwise_medfilt_quantiles_5MAD" # string to identify plots saved with these settings
+name = "freqwise_medfilt_whitened_5MAD" # string to identify plots saved with these settings
 sensitivity = 5 # anything sensitivity*MAD above/below median flagged
 med_win = 7
-n = 16
+noise_scale = 0.0008
 
 times = np.genfromtxt(times_file)
 
@@ -78,54 +78,45 @@ filtered = median_filter(corrected, size=[1,med_win])
 
 corrected -= filtered
 
+whitened = corrected + np.random.normal(loc=0, scale=noise_scale, size=corrected.shape)
+
 plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.001, vmax=0.002)
 plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_corrected_{med_win}med_win", dpi=600)
 plt.clf()
 
-quantiles = np.quantile(corrected, np.arange(n+1)[1:-1]/n, axis=0)
+MAD = np.median(np.abs(whitened), axis=0)
 
-print(quantiles[:,f])
-
-plt.imshow(quantiles, aspect='auto', vmin=0, vmax=0.002)
-plt.colorbar()
-plt.savefig(f"{plot_dir}/{name}_quantiles", dpi=600)
-plt.clf()
-
-#MAD = np.ma.median(np.abs(corrected), axis=0)
-MAD = np.ma.median(np.ma.masked_where(quantiles == 0, np.abs(quantiles)), axis=0)
-MAD[np.where((quantiles == 0).all(axis=0))] = 0
-
-globalMAD = np.median(np.abs(corrected))
+globalMAD = np.median(np.abs(whitened))
 
 axes = plt.gca()
 #axes.set_ylim([-0.01,0.01])
-plt.plot(corrected[:,f])
-plt.plot(np.median(corrected[:,f])*np.ones_like(logdata[:,500]))
+plt.plot(whitened[:,f])
+plt.plot(np.median(whitened[:,f])*np.ones_like(logdata[:,500]))
 plt.plot((MAD[f]*sensitivity)*np.ones_like(logdata[:,500]))
 #plt.plot((globalMAD*sensitivity)*np.ones_like(logdata[:,500]))
-plt.savefig(f"{plot_dir}/{name}_corrected_{f}f", dpi=600)
+plt.savefig(f"{plot_dir}/{name}_whitened_{f}f", dpi=600)
 plt.clf()
 
-#plt.plot(corrected[:,f2])
-#plt.plot(np.median(corrected[:,f2])*np.ones_like(logdata[:,500]))
-#plt.plot((MAD[f2]*sensitivity)*np.ones_like(logdata[:,500]))
-#plt.savefig(f"{plot_dir}/{name}_corrected_{f2}f", dpi=600)
-#plt.clf()
-#
-#plt.plot(corrected[t])
-#plt.plot((globalMAD*sensitivity*np.ones_like(logdata[500])))
-#plt.savefig(f"{plot_dir}/{name}_corrected_{t}t", dpi=600)
-#plt.clf()
-         
-flags = (corrected > sensitivity * MAD)
+plt.plot(whitened[:,f2])
+plt.plot(np.median(whitened[:,f2])*np.ones_like(logdata[:,500]))
+plt.plot((MAD[f2]*sensitivity)*np.ones_like(logdata[:,500]))
+plt.savefig(f"{plot_dir}/{name}_whitened_{f2}f", dpi=600)
+plt.clf()
 
-#plt.plot(corrected[:,f])
-#plt.plot(np.arange(corrected[:,f].size)[np.where(flags[:,f])], corrected[:,f][np.where(flags[:,f])], 'r.')
-#;plt.plot(np.median(corrected[:,f])*np.ones_like(logdata[:,500]))
-#plt.plot((MAD[f]*sensitivity)*np.ones_like(logdata[:,500]))
-#plt.savefig(f"{plot_dir}/{name}_flagged_{f}f", dpi=600)
-#plt.clf()
+plt.plot(whitened[t])
+plt.plot((globalMAD*sensitivity*np.ones_like(logdata[500])))
+plt.savefig(f"{plot_dir}/{name}_whitened_{t}t", dpi=600)
+plt.clf()
+         
+flags = (whitened > sensitivity * MAD)
+
+plt.plot(whitened[:,f])
+plt.plot(np.arange(whitened[:,f].size)[np.where(flags[:,f])], whitened[:,f][np.where(flags[:,f])], 'r.')
+plt.plot(np.median(whitened[:,f])*np.ones_like(logdata[:,500]))
+plt.plot((MAD[f]*sensitivity)*np.ones_like(logdata[:,500]))
+plt.savefig(f"{plot_dir}/{name}_flagged_{f}f", dpi=600)
+plt.clf()
 
 rfi_removed = np.ma.masked_where(flags, corrected)
 
