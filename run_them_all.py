@@ -8,9 +8,9 @@ from scipy.ndimage import median_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "big_run_timewise_medfilt" # string to identify plots saved with these settings
+name = "big_run_crossmed" # string to identify plots saved with these settings
 sensitivity = 5 # anything sensitivity*MAD above/below median flagged
-window = 10 # median filter window length
+window = 25
 
 times = np.genfromtxt(times_file)
 
@@ -32,17 +32,21 @@ for i in range(times.shape[0]//2):
 
     logdata = np.log10(subject[:,startf:])
 
-    plt.title("logdata")
-    plt.imshow(logdata[:,plot_if:plot_ff], aspect='auto', vmax=np.min(logdata[:,plot_if:plot_ff])+0.5)
+    median_f = np.median(logdata, axis=0)
+    
+    minus_meds = logdata - median_f
+    
+    filtered = median_filter(minus_meds, [1, window])
+    
+    corrected = minus_meds - filtered
+
+    plt.title("corrected")
+    plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.001, vmax=0.001)
     plt.colorbar()
-    plt.savefig(f"{plot_dir}/{name}_{i}_logdata", dpi=600)
+    plt.savefig(f"{plot_dir}/{name}_{i}_corrected", dpi=600)
     plt.clf()
 
-    filtered = median_filter(logdata, [1, window])
-
-    corrected = logdata - filtered
-
-    MAD = np.median(np.abs(corrected))
+    MAD = np.median(np.abs(corrected), axis=0)
 
     flags = (corrected > sensitivity * MAD)
 
@@ -52,7 +56,7 @@ for i in range(times.shape[0]//2):
     rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
 
     plt.title("RFI removed")
-    plt.imshow(rfi_removed[:,plot_if:plot_ff], aspect='auto')
+    plt.imshow(rfi_removed[:,plot_if:plot_ff], aspect='auto', vmin=-0.001, vmax=0.001)
     plt.colorbar()
     plt.savefig(f"{plot_dir}/{name}_{i}_rfi_removed", dpi=600)
     plt.clf()
@@ -60,7 +64,7 @@ for i in range(times.shape[0]//2):
     plt.title("RFI removed (logdata)")
     plt.imshow(np.ma.masked_where(flags, logdata)[:,plot_if:plot_ff], aspect='auto')
     plt.colorbar()
-    plt.savefig(f"{plot_dir}/{name}_{i}rfi_removed_logdata", dpi=600)
+    plt.savefig(f"{plot_dir}/{name}_{i}_rfi_removed_logdata", dpi=600)
     plt.clf()
 
     f, ((a0, a1), (a2, a3)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [3,1], 'height_ratios':[1,3]})
@@ -71,7 +75,7 @@ for i in range(times.shape[0]//2):
     a3.plot(rfi_occ_time, np.arange(rfi_occ_time.size))
     a3.margins(0)
     a3.set_ylim(a3.get_ylim()[::-1])
-    a2.imshow(rfi_removed, aspect='auto')
+    a2.imshow(rfi_removed, aspect='auto', vmin=-0.001, vmax=0.001)
     
     plt.title("RFI occupancy")
     plt.tight_layout()

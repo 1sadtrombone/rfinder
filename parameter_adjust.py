@@ -8,18 +8,18 @@ from scipy.ndimage import median_filter
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
-name = "param_adjust_localMAD_oddkernel" # string to identify plots saved with these settings
+name = "param_adjust_crossmed" # string to identify plots saved with these settings
 
-sens_min = 4
-sens_max = 12
-sens_step = 2
+sens_min = 6
+sens_max = 8
+sens_step = 1
 senses = np.arange(sens_min, sens_max, sens_step)
 
 wint = 1
 
-winf_min = 3
-winf_max = 11
-winf_step = 2
+winf_min = 9
+winf_max = 51
+winf_step = 20
 winfs = np.arange(winf_min, winf_max, winf_step)
 
 times = np.genfromtxt(times_file)
@@ -51,35 +51,52 @@ plt.clf()
 for sens in senses:
     for winf in winfs:
 
-            filtered = median_filter(logdata, [wint, winf])
+        median_f = np.median(logdata, axis=0)
 
-            corrected = logdata - filtered
+        minus_meds = logdata - median_f
 
-            plt.title("corrected")
-            plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmax=np.max(corrected), vmin=np.min(corrected))
-            plt.colorbar()
-            plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_corrected", dpi=600)
-            plt.clf()
+        filtered = median_filter(minus_meds, [1, winf])
 
-            MAD = np.median(np.abs(corrected), axis=1)
-            
-            plt.plot(corrected[t])
-            plt.plot((MAD*sens)[t]*np.ones_like(logdata[500]))
-            plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_corrected_{t}", dpi=600)
-            plt.clf()
+        corrected = minus_meds - filtered
 
-            flags = (corrected > sens * MAD.reshape((-1,1)))
+        plt.title("corrected")
+        plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmax=0.001, vmin=-0.001)
+        plt.colorbar()
+        plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_corrected", dpi=600)
+        plt.clf()
+        
+        MAD = np.median(np.abs(corrected), axis=0)
+        
+        flags = (corrected > sens * MAD)
 
-            rfi_removed = np.ma.masked_where(flags, corrected)
+        rfi_removed = np.ma.masked_where(flags, corrected)
 
-            plt.title("RFI removed")
-            plt.imshow(rfi_removed[:,plot_if:plot_ff], aspect='auto', vmax=np.max(rfi_removed), vmin=np.min(rfi_removed))
-            plt.colorbar()
-            plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_rfi_removed", dpi=600)
-            plt.clf()
+        rfi_occ_freq = np.sum(flags, axis=0) / flags.shape[0]
+        rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
 
-            plt.title("RFI removed (logdata)")
-            plt.imshow(np.ma.masked_where(flags, logdata)[:,plot_if:plot_ff], aspect='auto')
-            plt.colorbar()
-            plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_rfi_removed_logdata", dpi=600)
-            plt.clf()
+        plt.title("RFI removed")
+        plt.imshow(rfi_removed[:,plot_if:plot_ff], aspect='auto', vmax=0.001, vmin=-0.001)
+        plt.colorbar()
+        plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_rfi_removed", dpi=600)
+        plt.clf()
+
+        plt.title("RFI removed (logdata)")
+        plt.imshow(np.ma.masked_where(flags, logdata)[:,plot_if:plot_ff], aspect='auto')
+        plt.colorbar()
+        plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_rfi_removed_logdata", dpi=600)
+        plt.clf()
+
+        f, ((a0, a1), (a2, a3)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [3,1], 'height_ratios':[1,3]})
+        a1.set_axis_off()
+        
+        a0.plot(rfi_occ_freq)
+        a0.margins(0)
+        a3.plot(rfi_occ_time, np.arange(rfi_occ_time.size))
+        a3.margins(0)
+        a3.set_ylim(a3.get_ylim()[::-1])
+        a2.imshow(rfi_removed, aspect='auto', vmin=-0.001, vmax=0.001)
+        
+        plt.title("RFI occupancy")
+        plt.tight_layout()
+        plt.savefig(f"{plot_dir}/{name}_{sens}sens_{wint}wint_{winf}winf_occupancy", dpi=600)
+        
