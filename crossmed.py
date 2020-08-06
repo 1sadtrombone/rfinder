@@ -14,7 +14,7 @@ med_win = 25
 window = 25 # median filter window length
 
 unifilt_win = 15 # for rough lowf cutoff
-minfilt_win = 3
+minfilt_win = 5
 diff_thresh = 0.01 # mark lowest bin where -this < diff < this
 occupancy_thresh = 0.25
 
@@ -47,9 +47,11 @@ logdata = np.log10(spec)
 
 diff = np.diff(logdata, 1)
 
-const_inds = (((-diff_thresh < diff) * (diff < diff_thresh)).astype(int) - 1) * -1
+const_inds = (((-diff_thresh > diff) + (diff > diff_thresh)).astype(int)) # flag where diff big
 
-outliers_out = maximum_filter(const_inds, minfilt_win)
+outliers_out = maximum_filter(const_inds, minfilt_win) # get rid of flukes where RFI was 2-3 bins wide
+
+lowest_freqs = np.argmin(outliers_out, axis=1)
 
 occupancy = np.sum(outliers_out, axis=0) / outliers_out.shape[0]
 
@@ -58,12 +60,12 @@ lowest_freq = np.min(np.where(occupancy < occupancy_thresh))
 print(lowest_freq)
 
 plt.imshow(logdata, aspect='auto')
+plt.plot(lowest_freqs, np.arange(lowest_freqs.size), 'r')
 plt.figure()
 
 plt.imshow(outliers_out, aspect='auto')
-plt.figure()
+plt.plot(lowest_freqs, np.arange(lowest_freqs.size), 'r')
 
-plt.plot(occupancy)
 plt.show()
 ex
 
