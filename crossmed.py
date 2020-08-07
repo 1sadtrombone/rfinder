@@ -12,15 +12,13 @@ times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
 sensitivity = 5 # anything sensitivity*MAD above median flagged
 med_win = 25
 window = 25 # median filter window length
+n_quantiles = 4
 
-unifilt_win = 15 # for rough lowf cutoff
-minfilt_win = 5
-diff_thresh = 0.01 # mark lowest bin where -this < diff < this
-occupancy_thresh = 0.25
+filtwin = 50
+rough_thresh = 5
+max_occupancy = 1/n_quantiles
 
 day = 7
-
-first_nmode = 50
 
 name = f"crossmed_filteredmeds_globalMAD_day{day}_{sensitivity}MAD_{window}win_{med_win}medwin" # string to identify plots saved with these settings
 
@@ -45,29 +43,22 @@ plot_ff = 2100
 
 logdata = np.log10(spec)
 
-diff = np.diff(logdata, 1)
+medfilt = median_filter(logdata, [1,filtwin])
+corrected = logdata - medfilt
 
-const_inds = (((-diff_thresh > diff) + (diff > diff_thresh)).astype(int)) # flag where diff big
+MAD = np.median(np.abs(corrected))
 
-outliers_out = maximum_filter(const_inds, minfilt_win) # get rid of flukes where RFI was 2-3 bins wide
+rough_flags = (np.abs(corrected) > rough_thresh).astype(int)
 
-lowest_freqs = np.argmin(outliers_out, axis=1)
+maxfilted = maximum_filter(rough_flags,[1, filtwin]) # get rid of small gaps to the left
+opened_flags = minimum_filter(maxfilted,[1, filtwin]) # bring highest flagged channel back down to where the signal really is
+# now essentially filled out gaps in cruft then wiped the overhang away on the right edge (an "opening" filter)
 
-occupancy = np.sum(outliers_out, axis=0) / outliers_out.shape[0]
+lowest_freqs = np.argmin(opened_flags, axis=1) # find where the cruft ends
 
-lowest_freq = np.min(np.where(occupancy < occupancy_thresh))
+occupancy = np.sum(opened_flags, axis=0) / opened_flags.shape[0]
 
-print(lowest_freq)
-
-plt.imshow(logdata, aspect='auto')
-plt.plot(lowest_freqs, np.arange(lowest_freqs.size), 'r')
-plt.figure()
-
-plt.imshow(outliers_out, aspect='auto')
-plt.plot(lowest_freqs, np.arange(lowest_freqs.size), 'r')
-
-plt.show()
-ex
+lowest_freq = np.min(np.where(occupancy < max_occupancy))
 
 plt.title("logdata")
 plt.imshow(logdata[:,plot_if:plot_ff], aspect='auto')
