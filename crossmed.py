@@ -19,9 +19,9 @@ filtwin = 50
 rough_thresh = 5
 max_occupancy = 1/n_quantiles 
 
-day = 6
+day = 9
 
-name = f"crossmed_filteredquantiles_globalMAD_day{day}_{rough_thresh}roughMAD_{sensitivity}MAD_{med_win}win" # string to identify plots saved with these settings
+name = f"crossmed_filteredmeds_thenquantiles_globalMAD_day{day}_{rough_thresh}roughMAD_{sensitivity}MAD_{med_win}win" # string to identify plots saved with these settings
 
 # lowpass artifacts above 100MHz
 stopf = 1638
@@ -87,19 +87,18 @@ exit()
 
 qs = np.arange(n_quantiles)[1:]/n_quantiles
 
-quantiles = np.quantile(logdata, qs, axis=0)
-filtered_quantiles = median_filter(quantiles[0], med_win)
-flattened = logdata - filtered_quantiles
-
-#median_f = np.median(logdata, axis=0)
-#filtered_meds = median_filter(median_f, med_win)
-#flattened = logdata - filtered_meds
+median_f = np.median(logdata, axis=0)
+filtered_meds = median_filter(median_f, med_win)
+flattened = logdata - filtered_meds
 
 filtered = median_filter(flattened, [1, med_win])
 
-corrected = flattened - filtered
+quantiles = np.quantile(filtered, qs, axis=0)
+filtered_quantiles = median_filter(quantiles[0], med_win)
 
-plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.0025, vmax=0.0025)
+corrected = flattened - filtered - filtered_quantiles
+
+plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.01, vmax=0.02)
 plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_corrected", dpi=600)
 plt.clf()
