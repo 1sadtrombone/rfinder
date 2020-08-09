@@ -3,39 +3,40 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 import datetime
-from scipy.ndimage import median_filter, uniform_filter, maximum_filter
+from scipy.ndimage import median_filter, uniform_filter, maximum_filter, minimum_filter
 
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
 
+# real flagging stuff
 sensitivity = 5 # anything sensitivity*MAD above median flagged
 med_win = 25
-window = 25 # median filter window length
 n_quantiles = 4
 
+# rough flagging stuff
 filtwin = 50
 rough_thresh = 5
-max_occupancy = 1/n_quantiles
+max_occupancy = 1/n_quantiles 
 
-day = 7
+day = 6
 
-name = f"crossmed_filteredmeds_globalMAD_day{day}_{sensitivity}MAD_{window}win_{med_win}medwin" # string to identify plots saved with these settings
+name = f"crossmed_filteredquantiles_globalMAD_day{day}_{rough_thresh}roughMAD_{sensitivity}MAD_{med_win}win" # string to identify plots saved with these settings
+
+# lowpass artifacts above 100MHz
+stopf = 1638
 
 times = np.genfromtxt(times_file)
 
 ti = times[2*day]
 tf = times[2*day+1]
 
-t = 250
+t = 3500
 f = 530
 
 time, data = sft.ctime2data(data_dir, ti, tf)
 
 spec = data[0] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
-
-# and lowpass artifacts above 100MHz
-stopf = 1638
 
 # show only this freq range in the rfi removed plot and SVD plot
 plot_if = 0
@@ -60,6 +61,10 @@ occupancy = np.sum(opened_flags, axis=0) / opened_flags.shape[0]
 
 lowest_freq = np.min(np.where(occupancy < max_occupancy))
 
+lowest_freq = 0
+
+logdata = logdata[:,lowest_freq:stopf]
+
 plt.title("logdata")
 plt.imshow(logdata[:,plot_if:plot_ff], aspect='auto')
 plt.colorbar()
@@ -80,27 +85,28 @@ plt.show()
 exit()
 """
 
-median_f = np.median(logdata, axis=0)
+qs = np.arange(n_quantiles)[1:]/n_quantiles
 
-filtered_meds = median_filter(median_f, med_win)
+quantiles = np.quantile(logdata, qs, axis=0)
+filtered_quantiles = median_filter(quantiles[0], med_win)
+flattened = logdata - filtered_quantiles
 
-flattened = logdata - filtered_meds
+#median_f = np.median(logdata, axis=0)
+#filtered_meds = median_filter(median_f, med_win)
+#flattened = logdata - filtered_meds
 
-filtered = median_filter(flattened, [1, window])
+filtered = median_filter(flattened, [1, med_win])
 
 corrected = flattened - filtered
-
-plt.plot(np.median(corrected, axis=0))
-plt.figure()
 
 plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.0025, vmax=0.0025)
 plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_corrected", dpi=600)
 plt.clf()
 
-plt.plot(median_f[plot_if:plot_ff])
-plt.savefig(f"{plot_dir}/{name}_median_f")
-plt.clf()
+#plt.plot(quantiles[0,plot_if:plot_ff])
+#plt.savefig(f"{plot_dir}/{name}_first_quantile")
+#plt.clf()
 
 plt.imshow(flattened, aspect='auto')
 plt.colorbar()
@@ -125,6 +131,8 @@ plt.plot((MAD*np.ones_like(logdata[:,500])))
 plt.savefig(f"{plot_dir}/{name}_corrected_{f}f", dpi=600)
 plt.clf()
 
+axes = plt.gca()
+axes.set_ylim([-0.005,0.005])
 plt.plot(corrected[t])
 plt.plot(np.median(corrected[t])*np.ones_like(logdata[500]))
 plt.plot((MAD*sensitivity*np.ones_like(logdata[500])))
