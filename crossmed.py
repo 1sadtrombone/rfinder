@@ -16,7 +16,7 @@ n_quantiles = 4
 
 # rough flagging stuff
 filtwin = 50
-rough_thresh = 5
+rough_thresh = 2
 max_occupancy = 1/n_quantiles 
 
 day = 6
@@ -43,13 +43,13 @@ plot_if = 0
 plot_ff = 2100
 
 logdata = np.log10(spec)
-"""
+
 medfilt = median_filter(logdata, [1,filtwin])
 corrected = logdata - medfilt
 
 MAD = np.median(np.abs(corrected))
 
-rough_flags = (np.abs(corrected) > rough_thresh).astype(int)
+rough_flags = (np.abs(corrected) > rough_thresh*MAD).astype(int)
 
 maxfilted = maximum_filter(rough_flags,[1, filtwin]) # get rid of small gaps to the left
 opened_flags = minimum_filter(maxfilted,[1, filtwin]) # bring highest flagged channel back down to where the signal really is
@@ -60,10 +60,6 @@ lowest_freqs = np.argmin(opened_flags, axis=1) # find where the cruft ends
 occupancy = np.sum(opened_flags, axis=0) / opened_flags.shape[0]
 
 lowest_freq = np.min(np.where(occupancy < max_occupancy))
-"""
-lowest_freq = 0
-
-logdata = logdata[:,lowest_freq:stopf]
 
 plt.title("logdata")
 plt.imshow(logdata[:,plot_if:plot_ff], aspect='auto')
@@ -163,6 +159,8 @@ a3.plot(rfi_occ_time, np.arange(rfi_occ_time.size))
 a3.margins(0)
 a3.set_ylim(a3.get_ylim()[::-1])
 a2.imshow(rfi_removed, aspect='auto', vmin=-0.001, vmax=0.001)
+a2.plot(lowest_freqs, np.arange(lowest_freqs.size), 'r')
+a2.plot(stopf*np.ones_like(logdata[:,500]), np.arange(logdata[:,500].size), 'r')
 
 plt.title("RFI occupancy")
 plt.tight_layout()
