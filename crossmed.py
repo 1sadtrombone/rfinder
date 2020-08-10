@@ -10,8 +10,8 @@ plot_dir = "/home/wizard/mars/plots/rfinder"
 times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
 
 # real flagging stuff
-sensitivity = 5 # anything sensitivity*MAD above median flagged
-med_win = 25
+sensitivity = 2 # anything sensitivity*MAD above median flagged
+med_win = 15
 n_quantiles = 4
 
 # rough flagging stuff
@@ -19,9 +19,9 @@ filtwin = 50
 rough_thresh = 5
 max_occupancy = 1/n_quantiles 
 
-day = 9
+day = 6
 
-name = f"crossmed_filteredmeds_thenquantiles_globalMAD_day{day}_{rough_thresh}roughMAD_{sensitivity}MAD_{med_win}win" # string to identify plots saved with these settings
+name = f"crossmed_meds_thenquantiles_unifilt_globalMAD_day{day}_{rough_thresh}roughMAD_{sensitivity}MAD_{med_win}win" # string to identify plots saved with these settings
 
 # lowpass artifacts above 100MHz
 stopf = 1638
@@ -43,7 +43,7 @@ plot_if = 0
 plot_ff = 2100
 
 logdata = np.log10(spec)
-
+"""
 medfilt = median_filter(logdata, [1,filtwin])
 corrected = logdata - medfilt
 
@@ -60,7 +60,7 @@ lowest_freqs = np.argmin(opened_flags, axis=1) # find where the cruft ends
 occupancy = np.sum(opened_flags, axis=0) / opened_flags.shape[0]
 
 lowest_freq = np.min(np.where(occupancy < max_occupancy))
-
+"""
 lowest_freq = 0
 
 logdata = logdata[:,lowest_freq:stopf]
@@ -84,19 +84,18 @@ plt.plot(np.log(s), 'k.')
 plt.show()
 exit()
 """
-
 qs = np.arange(n_quantiles)[1:]/n_quantiles
 
 median_f = np.median(logdata, axis=0)
-filtered_meds = median_filter(median_f, med_win)
-flattened = logdata - filtered_meds
+flattened = logdata - median_f
 
 filtered = median_filter(flattened, [1, med_win])
 
-quantiles = np.quantile(filtered, qs, axis=0)
-filtered_quantiles = median_filter(quantiles[0], med_win)
+quantiles = np.quantile(flattened - filtered, qs, axis=0)
 
-corrected = flattened - filtered - filtered_quantiles
+noisy_corrected = flattened - filtered - quantiles[0]
+
+corrected = uniform_filter(noisy_corrected, [3,3])
 
 plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.01, vmax=0.02)
 plt.colorbar()
@@ -123,10 +122,15 @@ rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
 
 axes = plt.gca()
 axes.set_ylim([-0.01,0.01])
-plt.plot(corrected[:,f] - np.median(corrected[:,f]))
-plt.plot(np.arange(corrected[:,f].size)[np.where(flags[:,f])], (corrected[:,f]-np.median(corrected[:,f]))[np.where(flags[:,f])], 'r.')
+plt.plot(corrected[:,f])
+plt.plot(np.arange(corrected[:,f].size)[np.where(flags[:,f])], (corrected[:,f])[np.where(flags[:,f])], 'r.')
 plt.plot((MAD*np.ones_like(logdata[:,500])*sensitivity))
 plt.plot((MAD*np.ones_like(logdata[:,500])))
+
+for i in range(n_quantiles-1):
+    plt.plot(quantiles[i,f]*np.ones_like(logdata[:,500])-quantiles[0,f], label=i)
+plt.legend()
+
 plt.savefig(f"{plot_dir}/{name}_corrected_{f}f", dpi=600)
 plt.clf()
 
