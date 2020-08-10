@@ -12,16 +12,18 @@ times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
 # real flagging stuff
 sensitivity = 2 # anything sensitivity*MAD above median flagged
 med_win = 15
-n_quantiles = 4
+uni_win = [3,3]
+n_quantiles = 3
+quantile = 0
 
 # rough flagging stuff
 filtwin = 50
-rough_thresh = 2
+rough_thresh = 5
 max_occupancy = 1/n_quantiles 
 
-day = 6
+day = 9
 
-name = f"crossmed_meds_thenquantiles_unifilt_globalMAD_day{day}_{rough_thresh}roughMAD_{sensitivity}MAD_{med_win}win" # string to identify plots saved with these settings
+name = f"crossmed_thenquantiles_unifilt_globalMAD_day{day}_{rough_thresh}roughMAD_{sensitivity}MAD_{med_win}win_{quantile}of{n_quantiles-1}quantile" # string to identify plots saved with these settings
 
 # lowpass artifacts above 100MHz
 stopf = 1638
@@ -81,6 +83,8 @@ plt.show()
 exit()
 """
 qs = np.arange(n_quantiles)[1:]/n_quantiles
+print(qs)
+print(qs[quantile])
 
 median_f = np.median(logdata, axis=0)
 flattened = logdata - median_f
@@ -89,12 +93,16 @@ filtered = median_filter(flattened, [1, med_win])
 
 quantiles = np.quantile(flattened - filtered, qs, axis=0)
 
-noisy_corrected = flattened - filtered - quantiles[0]
+noisy_corrected = flattened - filtered - quantiles[quantile]
 
-corrected = uniform_filter(noisy_corrected, [3,3])
+corrected = uniform_filter(noisy_corrected, uni_win)
 
-plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.01, vmax=0.02)
+plt.plot(quantiles.T)
+plt.figure()
+plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.001, vmax=0.001)
 plt.colorbar()
+plt.show()
+exit()
 plt.savefig(f"{plot_dir}/{name}_corrected", dpi=600)
 plt.clf()
 
@@ -158,9 +166,10 @@ a0.margins(0)
 a3.plot(rfi_occ_time, np.arange(rfi_occ_time.size))
 a3.margins(0)
 a3.set_ylim(a3.get_ylim()[::-1])
-a2.imshow(rfi_removed, aspect='auto', vmin=-0.001, vmax=0.001)
+rfi_plot = a2.imshow(rfi_removed, aspect='auto', vmin=-0.001, vmax=0.001)
 a2.plot(lowest_freqs, np.arange(lowest_freqs.size), 'r')
 a2.plot(stopf*np.ones_like(logdata[:,500]), np.arange(logdata[:,500].size), 'r')
+f.colorbar(rfi_plot)
 
 plt.title("RFI occupancy")
 plt.tight_layout()
