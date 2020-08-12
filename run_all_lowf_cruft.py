@@ -12,13 +12,11 @@ times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
 # rough flagging stuff
 filtwin = 10
 thresh = 5
-smooth_win = 10
-
-day = 10
+max_occupancy = 0.25
 
 t = 950
 
-name = f"lowf_cruft_day{day}_{filtwin}filtwin_{thresh}thresh"
+name = f"big_run_lowf_cruft_{day}_{filtwin}filtwin_{thresh}thresh"
 pref = f"{plot_dir}/{name}"
 
 times = np.genfromtxt(times_file)
@@ -44,7 +42,11 @@ opened_flags = minimum_filter(maxfilted,[1, filtwin]) # bring highest flagged ch
 
 lowest_freqs = np.argmin(opened_flags, axis=1) # find where the cruft ends
 
-lowest_freqs = median_filter(lowest_freqs, smooth_win) # smooth out
+lowest_freqs = median_filter(lowest_freqs, filtwin)
+
+occupancy = np.sum(opened_flags, axis=0) / opened_flags.shape[0]
+
+lowest_freq = np.min(np.where(occupancy < max_occupancy))
 
 plt.imshow(corrected, aspect='auto', interpolation='none')
 plt.plot(lowest_freqs, np.arange(lowest_freqs.size), 'r')
