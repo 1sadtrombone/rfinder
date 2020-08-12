@@ -20,8 +20,8 @@ name = f"crossmed_unifilt_globalMAD_day{day}_{sensitivity}MAD_{med_win}win" # st
 
 # highpass cruft below 20MHz
 # lowpass artifacts above 100MHz
-startf = (20 * 2048) // 125
-stopf = (100 * 2048) // 125
+startf = 20
+stopf = 100
 
 times = np.genfromtxt(times_file)
 
@@ -56,8 +56,8 @@ flags = (corrected > sensitivity * MAD)
 
 rfi_removed = np.ma.masked_where(flags, corrected)
 
-rfi_occ_freq = np.sum(flags, axis=0) / flags.shape[0]
-rfi_occ_time = np.sum(flags, axis=1) / flags.shape[1]
+rfi_occ_freq = np.mean(flags, axis=0)
+rfi_occ_time = np.mean(flags, axis=1)
 
 rfi_removed_dB = 10 * rfi_removed
 
@@ -108,23 +108,29 @@ plt.clf()
 #plt.savefig(f"{plot_dir}/{name}_rfi_removed_logdata", dpi=600)
 #plt.clf()
 
-f, ((a0, a1), (a2, a3)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [3,1], 'height_ratios':[1,3], 'wspace':0, 'hspace':0})
+
+f, ((a0, a1), (a2, a3)) = plt.subplots(2, 2, figsize=(10,8), gridspec_kw={'width_ratios': [3,1], 'height_ratios':[1,3], 'wspace':0, 'hspace':0, 'left':0.2})
 a1.set_axis_off()
 a0.get_xaxis().set_ticks([])
 a3.get_yaxis().set_ticks([])
 
-rfi_plot = a2.imshow(rfi_removed_dB, aspect='auto', vmin=-0.01, vmax=0.01)
-a2.plot(startf*np.ones_like(logdata[:,500]), np.arange(logdata[:,500].size), 'r')
-a2.plot(stopf*np.ones_like(logdata[:,500]), np.arange(logdata[:,500].size), 'r')
-cbar = f.colorbar(rfi_plot)
-cbar.set_label("dB")
+rfi_plot = a2.imshow(rfi_removed_dB, aspect='auto', vmin=-0.01, vmax=0.01, extent=[0, 125, tf, ti], interpolation='none')
+a2.plot(startf*np.ones(int(tf-ti)), ti+np.arange(tf-ti), 'r')
+a2.plot(stopf*np.ones(int(tf-ti)), ti+np.arange(tf-ti), 'r')
 a0.plot(rfi_occ_freq)
 a0.margins(0)
 a3.plot(rfi_occ_time, np.arange(rfi_occ_time.size))
 a3.margins(0)
 a3.set_ylim(a3.get_ylim()[::-1])
 
+ca = f.add_axes([0.1, 0.15, 0.03, 0.5])
+cbar = f.colorbar(rfi_plot, cax=ca)
+cbar.set_label("dBm")
+ca.yaxis.set_label_position("left")
+ca.yaxis.tick_left()
+
 a0.set_title("RFI occupancy")
 plt.tight_layout()
+
 plt.savefig(f"{plot_dir}/{name}_occupancy", dpi=600)
 plt.show()
