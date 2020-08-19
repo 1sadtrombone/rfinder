@@ -16,9 +16,9 @@ uni_win = [3,3]
 
 dB_thresh = 1
 
-day = 10
+day = 6
 
-name = f"flattened_day{day}_{dB_thresh}dB" # string to identify plots saved with these settings
+name = f"trying_out_cmaps" # string to identify plots saved with these settings
 print(f"writing plots called {name}")
 
 # highpass cruft below 20MHz
@@ -59,10 +59,52 @@ corrected = uniform_filter(noisy_corrected, uni_win)
 
 MAD = np.median(np.abs(corrected))
 
-flags = (corrected > sensitivity * MAD)
+flags = (corrected - np.median(corrected) > sensitivity * MAD)
 flags_simple = (flattened > dB_thresh)
 
-rfi_removed = np.ma.masked_where(flags, logdata)
+rfi_removed = np.ma.masked_where(flags, corrected)
+
+#print(sensitivity*MAD)
+#startchan = int(startf*2048/125)
+##print(np.ma.median(np.abs(rfi_removed[:,startchan:] - np.ma.median(rfi_removed[:,startchan:]))))
+#no_outliers = np.ma.masked_where(np.abs(rfi_removed[:,startchan:]) > 0.05, rfi_removed[:,startchan:])
+#all_rfi_removed = no_outliers.flatten()[~no_outliers.flatten().mask]
+##all_rfi_removed = corrected.flatten()#[~corrected.flatten().mask]
+#clean_region_rfi_removed = rfi_removed[1000:2600, 1200:1280].flatten()[~rfi_removed[1000:2600, 1200:1280].flatten().mask]
+#flagged_vals = corrected[rfi_removed.mask]
+#noise_sig = np.std(all_rfi_removed)
+#
+#M = np.max(all_rfi_removed)
+#print(M)
+#
+#noise = np.random.normal(loc=0, scale=noise_sig, size=logdata.shape)
+#
+##plt.hist(rfi_removed[:,startchan:].flatten(), bins=np.linspace(-0.05,0.05))
+##binned_corrected, bins, _ = plt.hist(corrected[1000:2600, 1200:1280].flatten(), bins=np.linspace(-0.01, 0.01, 100))
+#binned_removed, bins, _ = plt.hist(all_rfi_removed, bins=np.linspace(-0.01, 0.01, 100))
+#binned_clean_removed, _, _ = plt.hist(clean_region_rfi_removed, bins=np.linspace(-0.01, 0.01, 100))
+#
+##plt.figure()
+##plt.plot(binned_corrected - binned_removed)
+#
+#ind = np.argmin((bins < -M))
+#
+##false_pos = (np.sum(all_rfi_removed <= 0) - np.sum((all_rfi_removed <= 0)*(all_rfi_removed > -M))) / (all_rfi_removed.size + np.sum((all_rfi_removed <= 0)*(all_rfi_removed > -M)))
+##false_pos = np.sum(binned_corrected - binned_removed) / np.sum(binned_corrected)
+#false_pos = np.sum(binned_removed[:ind]) / (np.sum(binned_removed) + np.sum(binned_removed[:ind]))
+#false_pos_clean = np.sum(binned_clean_removed[:ind]) / (np.sum(binned_clean_removed) + np.sum(binned_clean_removed[:ind]))
+#    
+##print((all_rfi_removed.size + np.sum((all_rfi_removed <= 0)*(all_rfi_removed > -M))) - np.sum(binned_corrected))
+##print(np.sum(binned_corrected) - corrected[1000:2600, 1200:1280].flatten().size)
+#
+##print(f"half: {np.sum(all_rfi_removed <= 0)}")
+##print(f"within: {np.sum((all_rfi_removed <= 0)*(all_rfi_removed > -M))}")
+##print(f"outside: {(np.sum(all_rfi_removed <= 0) - np.sum((all_rfi_removed <= 0)*(all_rfi_removed > -M)))}")
+##print(f"total: {(all_rfi_removed.size + np.sum((all_rfi_removed <= 0)*(all_rfi_removed > -M)))}")
+#print(false_pos)
+#print(false_pos_clean)
+#
+#print(np.mean(flags[1000:2600, 1200:1280]))
 
 rfi_occ_freq = np.mean(flags, axis=0)
 rfi_occ_time = np.mean(flags, axis=1)
@@ -73,11 +115,11 @@ rfi_occ_time = np.mean(flags, axis=1)
 #plt.savefig(f"{plot_dir}/{name}_logdata", dpi=600)
 #plt.clf()
 
-plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto')
-plt.colorbar()
-plt.savefig(f"{plot_dir}/{name}_corrected", dpi=600)
-plt.show()
-plt.clf()
+#plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto')
+#plt.colorbar()
+#plt.savefig(f"{plot_dir}/{name}_corrected", dpi=600)
+#plt.show()
+#plt.clf()
 
 #plt.imshow(flattened, aspect='auto')
 #plt.colorbar()
@@ -102,12 +144,14 @@ plt.clf()
 #plt.plot((MAD*sensitivity*np.ones_like(logdata[500])))
 #plt.savefig(f"{plot_dir}/{name}_corrected_{t}t", dpi=600)
 #plt.clf()
-         
+
+plt.figure()
 plt.title("RFI removed")
 plt.imshow(rfi_removed[:,plot_if:plot_ff], aspect='auto', vmin=-.01, vmax=.01)
 plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_rfi_removed_corrected", dpi=600)
 plt.clf()
+
 
 #plt.title("RFI removed")
 #plt.imshow(np.ma.masked_where(flags, logdata)[:,plot_if:plot_ff], aspect='auto')
@@ -125,12 +169,12 @@ start_time = datetime.datetime.utcfromtimestamp(tz_correct_ti).strftime('%x, %X'
 hours_since = (actual_tf-actual_ti) / (60*60)
 myext = [0, 125, hours_since, 0]
 
-rfi_plot = a2.imshow(rfi_removed, aspect='auto', extent=myext, interpolation='none')
-a2.plot(startf*np.ones(2), [0,hours_since], 'r')
-a2.plot(stopf*np.ones(2), [0,hours_since], 'r')
-a0.plot(rfi_occ_freq)
+rfi_plot = a2.imshow(rfi_removed, aspect='auto', extent=myext, interpolation='none', vmin=-0.1, vmax=0.1)
+#a2.plot(startf*np.ones(2), [0,hours_since], 'r')
+#a2.plot(stopf*np.ones(2), [0,hours_since], 'r')
+a0.plot(rfi_occ_freq, 'k')
 a0.margins(0)
-a3.plot(rfi_occ_time, np.arange(rfi_occ_time.size))
+a3.plot(rfi_occ_time, np.arange(rfi_occ_time.size), 'k')
 a3.margins(0)
 a3.set_ylim(a3.get_ylim()[::-1])
 

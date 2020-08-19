@@ -16,7 +16,7 @@ uni_win = [3,3]
 
 dB_thresh = 1
 
-name = f"all_days_story" # string to identify plots saved with these settings
+name = f"all_days_story_trueMAD" # string to identify plots saved with these settings
 
 startf = 20
 stopf = 100
@@ -38,7 +38,7 @@ for i in range(times.shape[0]//2):
 
     subject = data[0] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
 
-    logdata = np.log10(subject)
+    logdata = 10*np.log10(subject)
 
     median_f = np.median(logdata, axis=0)
     filtered_meds = median_filter(median_f, med_win)
@@ -50,10 +50,12 @@ for i in range(times.shape[0]//2):
     
     corrected = uniform_filter(noisy_corrected, uni_win)
 
+    print(np.median(corrected))
+
     MAD = np.median(np.abs(corrected))
 
-    flags = (corrected > sensitivity * MAD)
-    flags_simple = (flattened * 10 > dB_thresh)
+    flags = (corrected - np.median(corrected) > sensitivity * MAD)
+    flags_simple = (flattened > dB_thresh)
 
     rfi_removed = np.ma.masked_where(flags, corrected)
     rfi_removed_simple = np.ma.masked_where(flags_simple, logdata)
@@ -72,7 +74,7 @@ for i in range(times.shape[0]//2):
     myext = [0, 125, hours_since, 0]
 
     plt.title("Raw Power Spectra")
-    plt.imshow(logdata*10, aspect='auto', interpolation='none', extent=myext)
+    plt.imshow(logdata, aspect='auto', interpolation='none', extent=myext)
     plt.colorbar(label='dB')
     plt.xlabel('Frequency (MHz)')
     plt.ylabel(f'Hours Since {start_time}')
@@ -80,7 +82,7 @@ for i in range(times.shape[0]//2):
     plt.clf()
 
     plt.title("Power Spectra with Subtracted Background")
-    plt.imshow(corrected*10, aspect='auto', interpolation='none', extent=myext, vmin=-0.1, vmax=0.1)
+    plt.imshow(corrected, aspect='auto', interpolation='none', extent=myext, vmin=-0.1, vmax=0.1)
     plt.colorbar(label="dB")
     plt.xlabel('Frequency (MHz)')
     plt.ylabel(f'Hours Since {start_time}')
@@ -92,7 +94,7 @@ for i in range(times.shape[0]//2):
     a0.get_xaxis().set_ticks([])
     a3.get_yaxis().set_ticks([])
     
-    rfi_plot = a2.imshow(rfi_removed_simple*10, aspect='auto', extent=myext, interpolation='none')
+    rfi_plot = a2.imshow(rfi_removed_simple, aspect='auto', extent=myext, interpolation='none')
     a2.plot(startf*np.ones(2), [0,hours_since], 'r')
     a2.plot(stopf*np.ones(2), [0,hours_since], 'r')
     a0.plot(rfi_occ_freq_simple, 'k')
@@ -120,7 +122,7 @@ for i in range(times.shape[0]//2):
     a0.get_xaxis().set_ticks([])
     a3.get_yaxis().set_ticks([])
         
-    rfi_plot = a2.imshow(rfi_removed*10, aspect='auto', extent=myext, interpolation='none', vmin=-0.1, vmax=0.1)
+    rfi_plot = a2.imshow(rfi_removed, aspect='auto', extent=myext, interpolation='none', vmin=-0.1, vmax=0.1)
     a2.plot(startf*np.ones(2), [0,hours_since], 'r')
     a2.plot(stopf*np.ones(2), [0,hours_since], 'r')
     a0.plot(rfi_occ_freq, 'k')
@@ -146,17 +148,36 @@ for i in range(times.shape[0]//2):
 overall_occ_freq = np.mean(total_occupancy, axis=0)
 overall_occ_freq_simple = np.mean(total_occupancy_simple, axis=0)
 
-plt.plot([0,125], 0.02*np.ones(2), 'r', label="False Flag Rate")
-plt.plot(np.linspace(0,125,overall_occ_freq.size), overall_occ_freq, 'k')
+false_pos = 0.2 # percent
+
+plt.ylim([0,30])
+plt.plot(np.linspace(20,100,overall_occ_freq.size-int(45*2048/125)), overall_occ_freq[int(20*2048/125):int(100*2048/125)]*100, 'k')
+plt.plot([20,100], false_pos*np.ones(2), 'r', label="False Flag Rate")
 plt.xlabel('Frequency (MHz)')
-plt.ylabel('RFI Occupancy')
+plt.ylabel('RFI Occupancy (%)')
 plt.title('RFI Occupancy Over All Time Using Background Subtraction Technique')
 plt.legend()
-plt.savefig(f"{plot_dir}/{name}_occ_freq")
+plt.savefig(f"{plot_dir}/{name}_occ_freq_zoom")
 plt.clf()
 
-plt.plot(np.linspace(0,125,overall_occ_freq.size), overall_occ_freq_simple, 'k')
+days = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20]
+
+plt.plot(days, np.mean(total_occupancy, axis=1)*100, 'k.')
+plt.xlabel('Jul. 2019')
+plt.ylabel('RFI Occupancy (%)')
+plt.savefig(f"{plot_dir}/{name}_occ_time")
+plt.clf()
+
+plt.plot(np.linspace(0,125,overall_occ_freq.size), overall_occ_freq_simple*100, 'k')
 plt.xlabel('Frequency (MHz)')
-plt.ylabel('RFI Occupancy')
+plt.ylabel('RFI Occupancy (%)')
 plt.title('RFI Occupancy Over All Time Using Simple Flagging Technique')
 plt.savefig(f"{plot_dir}/{name}_occ_freq_simple")
+plt.clf()
+
+plt.imshow(total_occupancy*100, aspect='auto', interpolation='none', extent=[0, 125, times.size, 0], vmin=false_pos, vmax=30)
+plt.xlabel('Frequency (MHz)')
+plt.ylabel('Days Since 5 Jul.')
+plt.title('RFI Occupancy Over Time')
+plt.colorbar(label='RFI Occupancy (%)')
+plt.savefig(f"{plot_dir}/{name}_occ")
