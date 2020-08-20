@@ -18,7 +18,7 @@ dB_thresh = 1
 
 day = 6
 
-name = f"trying_out_cmaps" # string to identify plots saved with these settings
+name = f"remote_survey_sites" # string to identify plots saved with these settings
 print(f"writing plots called {name}")
 
 # highpass cruft below 20MHz
@@ -28,8 +28,24 @@ stopf = 100
 
 times = np.genfromtxt(times_file)
 
-ti = times[2*day]
-tf = times[2*day+1]
+#ti = times[2*day]
+#tf = times[2*day+1]
+
+sites = np.array([4, 9, 7, 1, 8, 21, 22])
+pols = np.array([0, 0, 0, 1, 1, 1, 1]) # pol to look at to get sharkie
+survey_good_times = np.array(['20190710 13:32:09', '20190710 13:45:00', '20190710 14:08:28', '20190710 14:25:00', '20190710 14:56:18', '20190710 15:07:38', '20190712 11:52:00', '20190712 12:11:30', '20190712 12:34:00', '20190712 12:44:00', '20190718 12:54:48', '20190718 13:30:00', '20190718 13:45:00', '20190718 14:40:00'])
+
+timestamps = np.zeros_like(survey_good_times, dtype=int)
+
+for i in range(len(sites)):
+    timestamps[2*i] = datetime.datetime.strptime(f'{survey_good_times[2*i]} -0500', '%Y%m%d %H:%M:%S %z').timestamp()
+    timestamps[2*i+1] = datetime.datetime.strptime(f'{survey_good_times[2*i+1]} -0500', '%Y%m%d %H:%M:%S %z').timestamp()
+
+np.savetxt('survey_times_human.csv', np.vstack((survey_good_times, np.repeat(sites,2), np.repeat(pols,2))).T, header='times, site, pol', delimiter=',', fmt='%s')
+print(np.vstack((timestamps, np.repeat(sites,2), np.repeat(pols,2))).T)
+np.savetxt('survey_times.csv', np.vstack((timestamps, np.repeat(sites,2), np.repeat(pols,2))).T, delimiter=',', fmt='%d')
+    
+exit()
 
 t = 3500
 f = 530
@@ -39,7 +55,7 @@ time, data = sft.ctime2data(data_dir, ti, tf)
 actual_ti = time[0]
 actual_tf = time[-1]
 
-spec = data[0] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
+spec = data[pols[i]] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
 
 # show only this freq range in the rfi removed plot and SVD plot
 plot_if = 0
@@ -64,6 +80,7 @@ flags_simple = (flattened > dB_thresh)
 
 rfi_removed = np.ma.masked_where(flags, corrected)
 
+# False Flag Rate Stuff
 #print(sensitivity*MAD)
 #startchan = int(startf*2048/125)
 ##print(np.ma.median(np.abs(rfi_removed[:,startchan:] - np.ma.median(rfi_removed[:,startchan:]))))
@@ -109,11 +126,14 @@ rfi_removed = np.ma.masked_where(flags, corrected)
 rfi_occ_freq = np.mean(flags, axis=0)
 rfi_occ_time = np.mean(flags, axis=1)
 
-#plt.title("logdata")
-#plt.imshow(logdata[:,plot_if:plot_ff], aspect='auto')
-#plt.colorbar()
-#plt.savefig(f"{plot_dir}/{name}_logdata", dpi=600)
-#plt.clf()
+myext = [0, 125, actual_ti, actual_tf]
+
+plt.title("logdata")
+plt.imshow(logdata[:,plot_if:plot_ff], aspect='auto', interpolation='none', extent=myext)
+plt.colorbar()
+plt.savefig(f"{plot_dir}/{name}_logdata", dpi=600)
+plt.show()
+plt.clf()
 
 #plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto')
 #plt.colorbar()
