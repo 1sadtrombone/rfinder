@@ -116,22 +116,20 @@ def time2fnames(time_start, time_stop, dir_parent, fraglen=5):
 
     fnames = []
     for time_coarse in times_coarse:
-        try:
-            # Include +-1 coarse directory on endpoints because
-            # sometimes the fine time stamp rolls over to the coarse
-            # time within the same directory
-            if int(time_coarse) < int(str(time_start)[:fraglen])-1 or int(time_coarse) > int(str(time_stop)[:fraglen])+1:
-       	        continue
-            all_fnames = os.listdir('{}/{}'.format(dir_parent, time_coarse))
-            all_fnames.sort()
-
-            for f in all_fnames:
-                if s.search(f):
-                    tstamp = int(s.search(f).groups()[0])
-                    if tstamp >= time_start and tstamp <= time_stop:
-                        fnames.append(dir_parent+'/'+time_coarse+'/'+f)
-        except:
-            pass
+        # Include +-1 coarse directory on endpoints because
+        # sometimes the fine time stamp rolls over to the coarse
+        # time within the same directory
+        if int(time_coarse) < int(str(time_start)[:fraglen])-1 or int(time_coarse) > int(str(time_stop)[:fraglen])+1:
+            continue
+        all_fnames = os.listdir('{}/{}'.format(dir_parent, time_coarse))
+        all_fnames.sort()
+        
+        for f in all_fnames:
+            if s.search(f):
+                tstamp = int(s.search(f).groups()[0])
+                if tstamp >= time_start - 3600 and tstamp <= time_stop + 3600:
+                    # Include +/- 1 hour in case requented times lie between files
+                    fnames.append(dir_parent+'/'+time_coarse+'/'+f)
     fnames.sort()
     return fnames
 
@@ -156,6 +154,8 @@ def ctime2data(dir_parent, ct_start, ct_stop, pols = [0,1], time_file='time_gps_
 
     inds = np.where( (time >= ct_start) & (time <= ct_stop) )[0]
     time = time[inds]
+
+    np.set_printoptions(precision=100)
     
     print("Requested start time was: "+str(ct_start))
     print("Requested stop time was: "+str(ct_stop))
