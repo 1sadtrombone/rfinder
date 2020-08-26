@@ -46,7 +46,6 @@ for i in range(times.shape[0]//2):
     logdata = 10*np.log10(subject)
 
     median_f = np.median(logdata, axis=0)
-    filtered_meds = median_filter(median_f, med_win)
     flattened = logdata - median_f
     
     filtered = median_filter(flattened, [1, med_win])
@@ -55,7 +54,7 @@ for i in range(times.shape[0]//2):
     
     corrected = uniform_filter(noisy_corrected, uni_win)
 
-    MAD = np.median(np.abs(corrected))
+    MAD = np.median(np.abs(corrected - np.median(corrected)))
 
     flags = (corrected - np.median(corrected) > sensitivity * MAD)
 

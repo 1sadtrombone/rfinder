@@ -16,15 +16,15 @@ uni_win = [3,3]
 
 dB_thresh = 1
 
-day = 6
+day = 9
 
-name = f"remote_survey_sites" # string to identify plots saved with these settings
+name = f"making_multipanel" # string to identify plots saved with these settings
 print(f"writing plots called {name}")
 
 # highpass cruft below 20MHz
 # lowpass artifacts above 100MHz
-startf = 20
-stopf = 100
+startf = 0
+stopf = 150
 
 times = np.genfromtxt(times_file)
 
@@ -56,12 +56,14 @@ noisy_corrected = flattened - filtered
 
 corrected = uniform_filter(noisy_corrected, uni_win)
 
-MAD = np.median(np.abs(corrected))
+MAD = np.median(np.abs(corrected - np.median(corrected)))
 
 flags = (corrected - np.median(corrected) > sensitivity * MAD)
-flags_simple = (flattened > dB_thresh)
 
 rfi_removed = np.ma.masked_where(flags, corrected)
+
+#plt.subplot(411)
+#plt.imshow(logdata)
 
 # False Flag Rate Stuff
 #print(sensitivity*MAD)
@@ -111,18 +113,18 @@ rfi_occ_time = np.mean(flags, axis=1)
 
 myext = [0, 125, actual_ti, actual_tf]
 
-plt.title("logdata")
-plt.imshow(logdata[:,plot_if:plot_ff], aspect='auto', interpolation='none', extent=myext)
-plt.colorbar()
-plt.savefig(f"{plot_dir}/{name}_logdata", dpi=600)
-plt.show()
-plt.clf()
-
-#plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto')
+#plt.title("logdata")
+#plt.imshow(logdata[:,plot_if:plot_ff], aspect='auto', interpolation='none', extent=myext)
 #plt.colorbar()
-#plt.savefig(f"{plot_dir}/{name}_corrected", dpi=600)
-#plt.show()
+#plt.savefig(f"{plot_dir}/{name}_logdata", dpi=600)
 #plt.clf()
+
+plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.01, vmax=0.01)
+plt.colorbar()
+plt.show()
+exit()
+plt.savefig(f"{plot_dir}/{name}_corrected", dpi=600)
+plt.clf()
 
 #plt.imshow(flattened, aspect='auto')
 #plt.colorbar()
@@ -153,6 +155,7 @@ plt.title("RFI removed")
 plt.imshow(rfi_removed[:,plot_if:plot_ff], aspect='auto', vmin=-.01, vmax=.01)
 plt.colorbar()
 plt.savefig(f"{plot_dir}/{name}_rfi_removed_corrected", dpi=600)
+plt.show()
 plt.clf()
 
 
