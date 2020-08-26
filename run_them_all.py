@@ -7,23 +7,26 @@ from scipy.ndimage import median_filter, minimum_filter, maximum_filter, uniform
 
 data_dir = "/home/wizard/mars/data_auto_cross"
 plot_dir = "/home/wizard/mars/plots/rfinder"
-times_file = "/home/wizard/mars/scripts/rfinder/survey_times.csv"
+times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
 
 # real flagging stuff
 sensitivity = 3 # anything sensitivity*MAD above median flagged
 med_win = 5
 uni_win = [3,3]
 
-name = f"all_sites_trueMAD" # string to identify plots saved with these settings
+name = f"all_days_notfiltedflattened" # string to identify plots saved with these settings
 
-startf = 20
-stopf = 100
+startf = 0
+stopf = 150 # until the end
 
-metadata = np.genfromtxt(times_file, delimiter=',')
+#metadata = np.genfromtxt(times_file, delimiter=',')
+#
+#times = metadata[:,0]
+#sites = metadata[:,1].astype(int)[::2]
+#pols = metadata[:,2].astype(int)[::2]
 
-times = metadata[:,0]
-sites = metadata[:,1].astype(int)[::2]
-pols = metadata[:,2].astype(int)[::2]
+days = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20]
+times = np.genfromtxt(times_file, delimiter=',')
 
 total_occupancy = np.zeros((times.shape[0]//2, 2048))
 
@@ -37,13 +40,14 @@ for i in range(times.shape[0]//2):
     actual_ti = time[0]
     actual_tf = time[-1]
 
-    subject = data[pols[i]] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
+    #subject = data[pols[i]] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
+    subject = data[0]
 
     logdata = 10*np.log10(subject)
 
     median_f = np.median(logdata, axis=0)
     filtered_meds = median_filter(median_f, med_win)
-    flattened = logdata - filtered_meds
+    flattened = logdata - median_f
     
     filtered = median_filter(flattened, [1, med_win])
     
@@ -72,16 +76,34 @@ for i in range(times.shape[0]//2):
     plt.colorbar(label='dB')
     plt.xlabel('Frequency (MHz)')
     plt.ylabel(f'Hours Since {start_time}')
-    plt.savefig(f"{plot_dir}/{name}_site{sites[i]}_logdata", dpi=600)
+    plt.savefig(f"{plot_dir}/{name}_day{days[i]}_logdata", dpi=600)
     plt.clf()
+
+    #plt.plot(np.linspace(0, 125, logdata.shape[1]), np.median(logdata, axis=0), label='median')
+    #plt.plot(np.linspace(0, 125, logdata.shape[1]), np.max(logdata, axis=0), label='maximum')
+    #plt.xlabel('Frequency (MHz)')
+    #plt.ylabel('Correlator Output (dB)')
+    #plt.legend()
+    #plt.savefig(f"{plot_dir}/{name}_site{sites[i]}_spectra", dpi=600)
+    #plt.clf()
 
     plt.title("Power Spectra with Subtracted Background")
     plt.imshow(corrected, aspect='auto', interpolation='none', extent=myext, vmin=-0.1, vmax=0.1)
     plt.colorbar(label="dB")
     plt.xlabel('Frequency (MHz)')
     plt.ylabel(f'Hours Since {start_time}')
-    plt.savefig(f"{plot_dir}/{name}_site{sites[i]}_corrected", dpi=600)
+    plt.savefig(f"{plot_dir}/{name}_day{days[i]}_corrected", dpi=600)
     plt.clf()
+
+    plt.title("Flagged Power Spectra with Subtracted Background")
+    plt.imshow(rfi_removed, aspect='auto', interpolation='none', extent=myext, vmin=-0.1, vmax=0.1)
+    plt.colorbar(label="dB")
+    plt.xlabel('Frequency (MHz)')
+    plt.ylabel(f'Hours Since {start_time}')
+    plt.savefig(f"{plot_dir}/{name}_day{days[i]}_rfi_removed", dpi=600)
+    plt.show()
+    plt.clf()
+
     
     f, ((a0, a1), (a2, a3)) = plt.subplots(2, 2, figsize=(10,8), gridspec_kw={'width_ratios': [3,1], 'height_ratios':[1,3], 'wspace':0, 'hspace':0, 'left':0.2})
     a1.set_axis_off()
@@ -89,11 +111,11 @@ for i in range(times.shape[0]//2):
     a3.get_yaxis().set_ticks([])
         
     rfi_plot = a2.imshow(rfi_removed, aspect='auto', extent=myext, interpolation='none', vmin=-0.1, vmax=0.1)
-    a2.plot(startf*np.ones(2), [0,hours_since], 'r')
-    a2.plot(stopf*np.ones(2), [0,hours_since], 'r')
-    a0.plot(rfi_occ_freq, 'k')
+    #a2.plot(startf*np.ones(2), [0,hours_since], 'r')
+    #a2.plot(stopf*np.ones(2), [0,hours_since], 'r')
+    a0.plot(rfi_occ_freq*100, 'k')
     a0.margins(0)
-    a3.plot(rfi_occ_time, np.arange(rfi_occ_time.size), 'k')
+    a3.plot(rfi_occ_time*100, np.arange(rfi_occ_time.size), 'k')
     a3.margins(0)
     a3.set_ylim(a3.get_ylim()[::-1])
     
@@ -108,7 +130,7 @@ for i in range(times.shape[0]//2):
     a2.set_xlabel("Frequency (MHz)")
     plt.tight_layout()
     
-    plt.savefig(f"{plot_dir}/{name}_site{sites[i]}_occupancy", dpi=600)
+    plt.savefig(f"{plot_dir}/{name}_day{days[i]}_occupancy", dpi=600)
     plt.close(f)
     
 overall_occ_freq = np.mean(total_occupancy, axis=0)
@@ -117,7 +139,7 @@ false_pos = 0.2 # percent
 
 plt.ylim([0,30])
 plt.plot(np.linspace(0,125,overall_occ_freq.size), overall_occ_freq*100, 'k')
-plt.plot([20,100], false_pos*np.ones(2), 'r', label="False Flag Rate")
+plt.plot([0,125], false_pos*np.ones(2), 'r', label="False Flag Rate")
 plt.xlabel('Frequency (MHz)')
 plt.ylabel('RFI Occupancy (%)')
 plt.title('RFI Occupancy Over All Time Using Background Subtraction Technique')
@@ -125,9 +147,7 @@ plt.legend()
 plt.savefig(f"{plot_dir}/{name}_occ_freq_zoom")
 plt.clf()
 
-days = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20]
-
-plt.plot(sites, np.mean(total_occupancy, axis=1)*100, 'k.')
+plt.plot(days, np.mean(total_occupancy, axis=1)*100, 'k.')
 plt.xlabel('Jul. 2019')
 plt.ylabel('RFI Occupancy (%)')
 plt.savefig(f"{plot_dir}/{name}_occ_time")

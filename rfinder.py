@@ -28,24 +28,8 @@ stopf = 100
 
 times = np.genfromtxt(times_file)
 
-#ti = times[2*day]
-#tf = times[2*day+1]
-
-sites = np.array([4, 9, 7, 1, 8, 21, 22])
-pols = np.array([0, 0, 0, 1, 1, 1, 1]) # pol to look at to get sharkie
-survey_good_times = np.array(['20190710 13:32:09', '20190710 13:45:00', '20190710 14:08:28', '20190710 14:25:00', '20190710 14:56:18', '20190710 15:07:38', '20190712 11:52:00', '20190712 12:11:30', '20190712 12:34:00', '20190712 12:44:00', '20190718 12:54:48', '20190718 13:30:00', '20190718 13:45:00', '20190718 14:40:00'])
-
-timestamps = np.zeros_like(survey_good_times, dtype=int)
-
-for i in range(len(sites)):
-    timestamps[2*i] = datetime.datetime.strptime(f'{survey_good_times[2*i]} -0500', '%Y%m%d %H:%M:%S %z').timestamp()
-    timestamps[2*i+1] = datetime.datetime.strptime(f'{survey_good_times[2*i+1]} -0500', '%Y%m%d %H:%M:%S %z').timestamp()
-
-np.savetxt('survey_times_human.csv', np.vstack((survey_good_times, np.repeat(sites,2), np.repeat(pols,2))).T, header='times, site, pol', delimiter=',', fmt='%s')
-print(np.vstack((timestamps, np.repeat(sites,2), np.repeat(pols,2))).T)
-np.savetxt('survey_times.csv', np.vstack((timestamps, np.repeat(sites,2), np.repeat(pols,2))).T, delimiter=',', fmt='%d')
-    
-exit()
+ti = times[2*day]
+tf = times[2*day+1]
 
 t = 3500
 f = 530
@@ -55,7 +39,7 @@ time, data = sft.ctime2data(data_dir, ti, tf)
 actual_ti = time[0]
 actual_tf = time[-1]
 
-spec = data[pols[i]] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
+spec = data[0] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
 
 # show only this freq range in the rfi removed plot and SVD plot
 plot_if = 0
@@ -64,8 +48,7 @@ plot_ff = 2100
 logdata = 10 * np.log10(spec)
 
 median_f = np.median(logdata, axis=0)
-filtered_meds = median_filter(median_f, med_win)
-flattened = logdata - filtered_meds
+flattened = logdata - median_f
 
 filtered = median_filter(flattened, [1, med_win])
 
