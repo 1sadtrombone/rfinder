@@ -23,8 +23,6 @@ print(f"writing plots called {name}")
 
 # highpass cruft below 20MHz
 # lowpass artifacts above 100MHz
-startf = 0
-stopf = 150
 
 times = np.genfromtxt(times_file)
 
@@ -33,6 +31,8 @@ tf = times[2*day+1]
 
 t = 3500
 f = 530
+
+offset = 200
 
 time, data = sft.ctime2data(data_dir, ti, tf)
 
@@ -44,6 +44,9 @@ spec = data[0] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
 # show only this freq range in the rfi removed plot and SVD plot
 plot_if = 0
 plot_ff = 2100
+
+plot_it = offset
+plot_ft = spec.shape[0]//3 + offset
 
 logdata = 10 * np.log10(spec)
 
@@ -62,8 +65,35 @@ flags = (corrected - np.median(corrected) > sensitivity * MAD)
 
 rfi_removed = np.ma.masked_where(flags, corrected)
 
-#plt.subplot(411)
-#plt.imshow(logdata)
+tz_correct_ti = actual_ti + offset - 5 * 60*60
+start_time = datetime.datetime.utcfromtimestamp(tz_correct_ti).strftime('%x, %X')
+mins_since = (spec.shape[0]/3) / (60) * (actual_tf-actual_ti)/spec.shape[0]
+
+myext = [0, 125, mins_since, 0]
+
+f, ax = plt.subplots(5, 1, figsize=(8,8), gridspec_kw={'height_ratios':[1,1,0,1,1]})
+
+ax[0].set_title("Raw Power Spectra")
+im = ax[0].imshow(logdata[plot_it:plot_ft], aspect='auto', interpolation='none', extent=myext)
+plt.colorbar(im)
+
+ax[1].set_title("\"Flattened\" Power Spectra")
+im = ax[1].imshow(flattened[plot_it:plot_ft], aspect='auto', interpolation='none', extent=myext, vmin=-0.1, vmax=0.1)
+plt.colorbar(im)
+
+ax[2].set_ylabel(f"Minutes Since {start_time}")
+
+ax[3].set_title("\"Corrected\" Power Spectra")
+im = ax[3].imshow(corrected[plot_it:plot_ft], aspect='auto', interpolation='none', extent=myext, vmin=-0.01, vmax=0.01)
+plt.colorbar(im)
+
+ax[4].set_title("Flagged Power Spectra")
+im = ax[4].imshow(rfi_removed[plot_it:plot_ft], aspect='auto', interpolation='none', extent=myext, vmin=-0.01, vmax=0.01)
+plt.colorbar(im)
+
+plt.tight_layout()
+plt.show()
+exit()
 
 # False Flag Rate Stuff
 #print(sensitivity*MAD)
@@ -119,7 +149,7 @@ myext = [0, 125, actual_ti, actual_tf]
 #plt.savefig(f"{plot_dir}/{name}_logdata", dpi=600)
 #plt.clf()
 
-plt.imshow(corrected[:,plot_if:plot_ff], aspect='auto', vmin=-0.01, vmax=0.01)
+plt.imshow(corrected[plot_it:plot_ft,plot_if:plot_ff], aspect='auto', vmin=-0.01, vmax=0.01)
 plt.colorbar()
 plt.show()
 exit()
