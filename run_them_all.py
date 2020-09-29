@@ -1,5 +1,6 @@
 import SNAPfiletools as sft
 import numpy as np
+import rfinder
 import copy
 import matplotlib.pyplot as plt
 import datetime
@@ -14,7 +15,7 @@ sensitivity = 3 # anything sensitivity*MAD above median flagged
 med_win = 5
 uni_win = [3,3]
 
-name = f"all_days_trueMAD" # string to identify plots saved with these settings
+name = f"all_good_days" # string to identify plots saved with these settings
 
 startf = 0
 stopf = 150 # until the end
@@ -25,8 +26,9 @@ stopf = 150 # until the end
 #sites = metadata[:,1].astype(int)[::2]
 #pols = metadata[:,2].astype(int)[::2]
 
-days = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20]
-times = np.genfromtxt(times_file, delimiter=',')
+days = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20][4:]
+pols = [0]*len(days)
+times = np.genfromtxt(times_file, delimiter=',')[8:]
 
 total_occupancy = np.zeros((times.shape[0]//2, 2048))
 
@@ -40,23 +42,25 @@ for i in range(times.shape[0]//2):
     actual_ti = time[0]
     actual_tf = time[-1]
 
-    #subject = data[pols[i]] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
-    subject = data[0]
+    subject = data[pols[i]] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
 
-    logdata = 10*np.log10(subject)
+    logdata, quan_f, flattened, filtered, noisy_corrected, corrected, flags = rfinder.flagRFI(subject, intermediate_results=True)
 
-    median_f = np.median(logdata, axis=0)
-    flattened = logdata - median_f
-    
-    filtered = median_filter(flattened, [1, med_win])
-    
-    noisy_corrected = flattened - filtered
-    
-    corrected = uniform_filter(noisy_corrected, uni_win)
-
-    MAD = np.median(np.abs(corrected - np.median(corrected)))
-
-    flags = (corrected - np.median(corrected) > sensitivity * MAD)
+    #logdata = 10*np.log10(subject)
+    #
+    #n=4;qs=np.arange(n+1)[1:-1]/n
+    #quan_f = np.quantile(logdata, qs, axis=0)
+    #flattened = logdata - quan_f[0]
+    #
+    #filtered = median_filter(flattened, [1, med_win])
+    #
+    #noisy_corrected = flattened - filtered
+    #
+    #corrected = uniform_filter(noisy_corrected, uni_win)
+    #
+    #MAD = np.median(np.abs(corrected - np.median(corrected)))
+    #
+    #flags = (corrected - np.median(corrected) > sensitivity * MAD)
 
     rfi_removed = np.ma.masked_where(flags, corrected)
 
@@ -70,13 +74,13 @@ for i in range(times.shape[0]//2):
     hours_since = (actual_tf-actual_ti) / (60*60)
     myext = [0, 125, hours_since, 0]
 
-    #plt.title("Raw Power Spectra")
-    #plt.imshow(logdata, aspect='auto', interpolation='none', extent=myext)
-    #plt.colorbar(label='dB')
-    #plt.xlabel('Frequency (MHz)')
-    #plt.ylabel(f'Hours Since {start_time}')
-    #plt.savefig(f"{plot_dir}/{name}_day{days[i]}_logdata", dpi=600)
-    #plt.clf()
+    plt.title("Raw Power Spectra")
+    plt.imshow(logdata, aspect='auto', interpolation='none', extent=myext)
+    plt.colorbar(label='dB')
+    plt.xlabel('Frequency (MHz)')
+    plt.ylabel(f'Hours Since {start_time}')
+    plt.savefig(f"{plot_dir}/{name}_day{days[i]}_logdata", dpi=600)
+    plt.clf()
     #
     ##plt.plot(np.linspace(0, 125, logdata.shape[1]), np.median(logdata, axis=0), label='median')
     ##plt.plot(np.linspace(0, 125, logdata.shape[1]), np.max(logdata, axis=0), label='maximum')
@@ -85,23 +89,22 @@ for i in range(times.shape[0]//2):
     ##plt.legend()
     ##plt.savefig(f"{plot_dir}/{name}_site{sites[i]}_spectra", dpi=600)
     ##plt.clf()
-    #
-    #plt.title("Power Spectra with Subtracted Background")
-    #plt.imshow(corrected, aspect='auto', interpolation='none', extent=myext, vmin=-0.1, vmax=0.1)
-    #plt.colorbar(label="dB")
-    #plt.xlabel('Frequency (MHz)')
-    #plt.ylabel(f'Hours Since {start_time}')
-    #plt.savefig(f"{plot_dir}/{name}_day{days[i]}_corrected", dpi=600)
-    #plt.clf()
-    #
-    #plt.title("Flagged Power Spectra with Subtracted Background")
-    #plt.imshow(rfi_removed, aspect='auto', interpolation='none', extent=myext, vmin=-0.1, vmax=0.1)
-    #plt.colorbar(label="dB")
-    #plt.xlabel('Frequency (MHz)')
-    #plt.ylabel(f'Hours Since {start_time}')
-    #plt.savefig(f"{plot_dir}/{name}_day{days[i]}_rfi_removed", dpi=600)
-    #plt.show()
-    #plt.clf()
+    
+    plt.title("Power Spectra with Subtracted Background")
+    plt.imshow(corrected, aspect='auto', interpolation='none', extent=myext, vmin=-0.1, vmax=0.1)
+    plt.colorbar(label="dB")
+    plt.xlabel('Frequency (MHz)')
+    plt.ylabel(f'Hours Since {start_time}')
+    plt.savefig(f"{plot_dir}/{name}_day{days[i]}_corrected", dpi=600)
+    plt.clf()
+    
+    plt.title("Flagged Power Spectra with Subtracted Background")
+    plt.imshow(rfi_removed, aspect='auto', interpolation='none', extent=myext, vmin=-0.1, vmax=0.1)
+    plt.colorbar(label="dB")
+    plt.xlabel('Frequency (MHz)')
+    plt.ylabel(f'Hours Since {start_time}')
+    plt.savefig(f"{plot_dir}/{name}_day{days[i]}_rfi_removed", dpi=600)
+    plt.clf()
     #
     #
     #f, ((a0, a1), (a2, a3)) = plt.subplots(2, 2, figsize=(10,8), gridspec_kw={'width_ratios': [3,1], 'height_ratios':[1,3], 'wspace':0, 'hspace':0, 'left':0.2})
@@ -134,7 +137,7 @@ for i in range(times.shape[0]//2):
     
 overall_occ_freq = np.mean(total_occupancy, axis=0)
 
-false_pos = 0.2 # percent
+false_pos = 2 # percent
 
 plt.ylim([0,30])
 plt.xlim([0,125])

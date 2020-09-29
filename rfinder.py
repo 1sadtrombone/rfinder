@@ -35,7 +35,7 @@ def flagRFI(spec, intermediate_results=False, thresh=3, med_win=5, uni_win=[3,3]
     flags = (corrected - np.median(corrected) > thresh * MAD)
 
     if intermediate_results:
-        out = [quan_f, flattened, filtered, noisy_corrected, corrected, flags]
+        out = [logdata, quan_f, flattened, filtered, noisy_corrected, corrected, flags]
     else:
         out = flags
 
