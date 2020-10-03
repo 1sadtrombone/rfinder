@@ -38,7 +38,7 @@ def flagRFI(spec, intermediate_results=False, thresh=3, med_win=5, uni_win=[3,3]
         out = [logdata, quan_f, flattened, filtered, noisy_corrected, corrected, flags]
     else:
         out = flags
-
+        
     return out
 
 if __name__=='__main__':
@@ -49,8 +49,8 @@ if __name__=='__main__':
     
     day = 9
     
-    #name = f"quan_{sensitivity}MAD_{med_win}win_day{day}" # string to identify plots saved with these settings
-    #print(f"writing plots called {name}")
+    name = f"day{day}" # string to identify plots saved with these settings
+    print(f"writing plots called {name}")
     
     # highpass cruft below 20MHz
     # lowpass artifacts above 100MHz
@@ -70,6 +70,42 @@ if __name__=='__main__':
     results = flagRFI(spec, intermediate_results=True)
 
     rfi_removed = np.ma.masked_where(results[-1], results[-2])
+
+    plt_ti = 300
+    plt_tf = spec.shape[0]//3 + plt_ti
+
+    steps = [results[0][plt_ti:plt_tf], results[2][plt_ti:plt_tf], results[5][plt_ti:plt_tf], rfi_removed[plt_ti:plt_tf]]
+    ranges = [[60,120], [-0.2,0.2], [-0.01,0.01], [-0.01,0.01]]
+    labels = ["Raw Power Spectra", *[f"After Step {i}" for i in [1,3,4]]] 
+
+    tz_correct_ti = actual_ti - 5 * 60*60
+    start_time = datetime.datetime.utcfromtimestamp(tz_correct_ti).strftime('%x, %X')
+    hours_since = (actual_tf - actual_ti) / (60*60)
+
+    myext = [0, 125, hours_since / 3, 0]
+
+    plt_start_time = datetime.datetime.utcfromtimestamp(tz_correct_ti+plt_ti).strftime('%x, %X')
+
+    fig, axs = plt.subplots(4,1)
+    for i,ax in enumerate(axs):
+        im = ax.imshow(steps[i], vmin=ranges[i][0], vmax=ranges[i][1], extent=myext, interpolation='none', aspect='auto')
+        fig.colorbar(im, ax=ax, label='dB', aspect=7)
+        ax.text(62.5,0,labels[i], horizontalalignment="center", verticalalignment="top",bbox=dict(facecolor='white', pad=2))
+        ax.set_yticks([0,1,2])
+        if i == 0:
+            ax.set_title("The Flagging Process")
+        if i < 3:
+            ax.set_xticks([])
+        else:
+            ax.set_xlabel("Frequency (MHz)")
+            
+    plt.subplots_adjust(hspace=0.15)
+    fig.add_subplot(111, frameon=False)
+    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    plt.grid(False)
+    plt.ylabel(f"Hours Since {plt_start_time}")
+    plt.savefig(f"{plot_dir}/{name}_steps", dpi=300)
+    exit()
 
     rfi_occ_freq = np.mean(results[-1], axis=0)
     rfi_occ_time = np.mean(results[-1], axis=1)
