@@ -2,6 +2,8 @@ import SNAPfiletools as sft
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
+from matplotlib import rc
+import matplotlib.font_manager
 import datetime
 from scipy.ndimage import median_filter, uniform_filter, maximum_filter, minimum_filter
 
@@ -26,16 +28,14 @@ def flagRFI(spec, intermediate_results=False, thresh=3, med_win=5, uni_win=[3,3]
     
     filtered = median_filter(flattened, [1, med_win])
     
-    noisy_corrected = flattened - filtered
-    
-    corrected = uniform_filter(noisy_corrected, uni_win)
+    corrected = flattened - filtered
     
     MAD = np.median(np.abs(corrected - np.median(corrected)))
     
     flags = (corrected - np.median(corrected) > thresh * MAD)
 
     if intermediate_results:
-        out = [logdata, quan_f, flattened, filtered, noisy_corrected, corrected, flags]
+        out = [logdata, quan_f, flattened, filtered, corrected, flags]
     else:
         out = flags
         
@@ -43,19 +43,22 @@ def flagRFI(spec, intermediate_results=False, thresh=3, med_win=5, uni_win=[3,3]
 
 if __name__=='__main__':
 
+    rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+    rc('text', usetex=True)
+
     data_dir = "/home/wizard/mars/data_auto_cross"
     plot_dir = "/home/wizard/mars/plots/rfinder"
     times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
+
+    day = 10
     
-    day = 9
-    
-    name = f"day{day}" # string to identify plots saved with these settings
+    name = f"day{day}_nounifilt" # string to identify plots saved with these settings
     print(f"writing plots called {name}")
     
     # highpass cruft below 20MHz
     # lowpass artifacts above 100MHz
     
-    times = np.genfromtxt(times_file)
+    times = np.genfromtxt(times_file, delimiter=',')
     
     ti = times[2*day]
     tf = times[2*day+1]
@@ -64,8 +67,8 @@ if __name__=='__main__':
     
     actual_ti = time[0]
     actual_tf = time[-1]
-    
-    spec = data[0] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
+
+    spec = data[1] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
 
     results = flagRFI(spec, intermediate_results=True)
 
@@ -74,9 +77,9 @@ if __name__=='__main__':
     plt_ti = 300
     plt_tf = spec.shape[0]//3 + plt_ti
 
-    steps = [results[0][plt_ti:plt_tf], results[2][plt_ti:plt_tf], results[5][plt_ti:plt_tf], rfi_removed[plt_ti:plt_tf]]
-    ranges = [[60,120], [-0.2,0.2], [-0.01,0.01], [-0.01,0.01]]
-    labels = ["Raw Power Spectra", *[f"After Step {i}" for i in [1,3,4]]] 
+    steps = [results[0][plt_ti:plt_tf], results[2][plt_ti:plt_tf], results[4][plt_ti:plt_tf], rfi_removed[plt_ti:plt_tf]]
+    ranges = [[60,120], [-0.2,0.2], [-0.05,0.05], [-0.05,0.05]]
+    labels = ["Raw Power Spectra", *[f"After Step {i}" for i in [1,2,3]]] 
 
     tz_correct_ti = actual_ti - 5 * 60*60
     start_time = datetime.datetime.utcfromtimestamp(tz_correct_ti).strftime('%x, %X')
@@ -84,26 +87,30 @@ if __name__=='__main__':
 
     myext = [0, 125, hours_since / 3, 0]
 
-    plt_start_time = datetime.datetime.utcfromtimestamp(tz_correct_ti+plt_ti).strftime('%x, %X')
-
-    fig, axs = plt.subplots(4,1)
+    secs_per_spectrum = 6.5
+    plt_start_time = datetime.datetime.utcfromtimestamp(tz_correct_ti+plt_ti*secs_per_spectrum).strftime('%x, %X')
+    
+    fig, axs = plt.subplots(4,1, figsize=((9,8)))
     for i,ax in enumerate(axs):
-        im = ax.imshow(steps[i], vmin=ranges[i][0], vmax=ranges[i][1], extent=myext, interpolation='none', aspect='auto')
+        im = ax.imshow(steps[i], vmin=ranges[i][0], vmax=ranges[i][1], extent=myext, interpolation='none', aspect='auto', cmap='plasma')#cmap='YlOrRd_r')
         fig.colorbar(im, ax=ax, label='dB', aspect=7)
-        ax.text(62.5,0,labels[i], horizontalalignment="center", verticalalignment="top",bbox=dict(facecolor='white', pad=2))
+        #ax.text(62.5,0,labels[i], horizontalalignment="center", verticalalignment="top",bbox=dict(facecolor='white', pad=2))
         ax.set_yticks([0,1,2])
-        if i == 0:
-            ax.set_title("The Flagging Process")
+        ax.set_title(labels[i], fontsize=12)
+        ax.tick_params(axis='both', labelsize=12)
         if i < 3:
             ax.set_xticks([])
         else:
-            ax.set_xlabel("Frequency (MHz)")
+            ax.set_xlabel("Frequency (MHz)", fontsize=16)
+            #ax.set_xticks([10*i for i in range(13)])
             
-    plt.subplots_adjust(hspace=0.15)
+    #plt.subplots_adjust(hspace=0.05)
     fig.add_subplot(111, frameon=False)
     plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     plt.grid(False)
-    plt.ylabel(f"Hours Since {plt_start_time}")
+    plt.ylabel(f"Hours Since {plt_start_time}", fontsize=16)
+    plt.tight_layout()
+    plt.show()
     plt.savefig(f"{plot_dir}/{name}_steps", dpi=300)
     exit()
 
