@@ -3,6 +3,7 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 from matplotlib import rc
+from matplotlib import cm
 import matplotlib.font_manager
 import datetime
 from scipy.ndimage import median_filter, uniform_filter, maximum_filter, minimum_filter
@@ -19,12 +20,10 @@ def flagRFI(spec, intermediate_results=False, thresh=3, med_win=5, uni_win=[3,3]
     """
 
     logdata = 10 * np.log10(spec)
-    
-    n = 4
-    qs = np.arange(n+1)[1:-1]/n
-    quan_f = np.quantile(logdata, qs, axis=0)
-    
-    flattened = logdata - quan_f[0]
+
+    medians = np.median(logdata, axis=0)
+
+    flattened = logdata - medians
     
     filtered = median_filter(flattened, [1, med_win])
     
@@ -35,7 +34,7 @@ def flagRFI(spec, intermediate_results=False, thresh=3, med_win=5, uni_win=[3,3]
     flags = (corrected - np.median(corrected) > thresh * MAD)
 
     if intermediate_results:
-        out = [logdata, quan_f, flattened, filtered, corrected, flags]
+        out = [logdata, medians, flattened, filtered, corrected, flags]
     else:
         out = flags
         
@@ -50,9 +49,9 @@ if __name__=='__main__':
     plot_dir = "/home/wizard/mars/plots/rfinder"
     times_file = "/home/wizard/mars/scripts/rfinder/good_times.csv"
 
-    day = 10
+    day = 14
     
-    name = f"day{day}_nounifilt" # string to identify plots saved with these settings
+    name = f"day{day}_nounifilt_5MAD" # string to identify plots saved with these settings
     print(f"writing plots called {name}")
     
     # highpass cruft below 20MHz
@@ -70,33 +69,45 @@ if __name__=='__main__':
 
     spec = data[1] # BE SURE TO LOOK AT THE POL11 STUFF TOO!!
 
-    results = flagRFI(spec, intermediate_results=True)
+    results = flagRFI(spec, intermediate_results=True, thresh=5)
 
+    # channels to hist
+    #sparse = 688
+    #some = 1705
+    #dense = 120
+
+    #logdata = results[0]
+
+    #np.savetxt('hist_data.csv', np.vstack((logdata[:,sparse], logdata[:,some], logdata[:,dense])), delimiter=',')
+    
     rfi_removed = np.ma.masked_where(results[-1], results[-2])
 
-    plt_ti = 300
+    plt_ti = spec.shape[0]//3
     plt_tf = spec.shape[0]//3 + plt_ti
 
     steps = [results[0][plt_ti:plt_tf], results[2][plt_ti:plt_tf], results[4][plt_ti:plt_tf], rfi_removed[plt_ti:plt_tf]]
-    ranges = [[60,120], [-0.2,0.2], [-0.05,0.05], [-0.05,0.05]]
-    labels = ["Raw Power Spectra", *[f"After Step {i}" for i in [1,2,3]]] 
+    ranges = [[60,120], [-0.5,0.5], [-0.05,0.05], [-0.05,0.05]]
+    labels = ["Raw Power Spectra", *[f"After Step {i+1}: {name}" for i,name in enumerate(['Rough Galactic Background Subtraction', 'Median Filtering', 'Flagging'])]] 
 
     tz_correct_ti = actual_ti - 5 * 60*60
     start_time = datetime.datetime.utcfromtimestamp(tz_correct_ti).strftime('%x, %X')
     hours_since = (actual_tf - actual_ti) / (60*60)
 
     myext = [0, 125, hours_since / 3, 0]
+    mycmap = copy.copy(cm.get_cmap("YlOrRd_r"))
+    mycmap.set_bad('blue', 1.)
 
     secs_per_spectrum = 6.5
     plt_start_time = datetime.datetime.utcfromtimestamp(tz_correct_ti+plt_ti*secs_per_spectrum).strftime('%x, %X')
     
     fig, axs = plt.subplots(4,1, figsize=((9,8)))
     for i,ax in enumerate(axs):
-        im = ax.imshow(steps[i], vmin=ranges[i][0], vmax=ranges[i][1], extent=myext, interpolation='none', aspect='auto', cmap='plasma')#cmap='YlOrRd_r')
+        im = ax.imshow(steps[i], vmin=ranges[i][0], vmax=ranges[i][1], extent=myext, interpolation='none', aspect='auto', cmap=mycmap)#cmap='YlOrRd_r')
+        ax.plot([110, 110], [myext[-1], myext[-2]], '--', color='k')
         fig.colorbar(im, ax=ax, label='dB', aspect=7)
         #ax.text(62.5,0,labels[i], horizontalalignment="center", verticalalignment="top",bbox=dict(facecolor='white', pad=2))
         ax.set_yticks([0,1,2])
-        ax.set_title(labels[i], fontsize=12)
+        ax.set_title(labels[i], fontsize=16)
         ax.tick_params(axis='both', labelsize=12)
         if i < 3:
             ax.set_xticks([])
@@ -111,7 +122,7 @@ if __name__=='__main__':
     plt.ylabel(f"Hours Since {plt_start_time}", fontsize=16)
     plt.tight_layout()
     plt.show()
-    plt.savefig(f"{plot_dir}/{name}_steps", dpi=300)
+    #plt.savefig(f"{plot_dir}/{name}_steps", dpi=300)
     exit()
 
     rfi_occ_freq = np.mean(results[-1], axis=0)
@@ -149,8 +160,6 @@ if __name__=='__main__':
 
 
 # UHH, you can ignore all below
-
-
 
 # show only this freq range in the rfi removed plot and SVD plot
 #plot_if = 0
